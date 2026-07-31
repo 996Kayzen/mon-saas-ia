@@ -6,7 +6,12 @@ from groq import Groq
 load_dotenv()
 
 app = Flask(__name__)
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("La clé GROQ_API_KEY est manquante dans les variables d'environnement.")
+    return Groq(api_key=api_key)
 
 SYSTEM_PROMPT = """
 Tu es un mentor business dynamique, intelligent et ultra-adaptatif.
@@ -57,6 +62,7 @@ def chat():
         return jsonify({'error': 'Aucun message reçu'}), 400
 
     try:
+        client = get_groq_client()
         messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
 
         response = client.chat.completions.create(
@@ -71,4 +77,5 @@ def chat():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
