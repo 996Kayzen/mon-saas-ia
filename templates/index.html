@@ -16,10 +16,11 @@
             <div class="message bot">Bonjour ! Comment puis-je t'aider aujourd'hui ?</div>
         </div>
 
-        <form id="chat-form" class="chat-input-area">
-            <input type="text" id="user-input" placeholder="Écris ton message ici..." required autocomplete="off">
-            <button type="submit">Envoyer</button>
-        </form>
+        <!-- On utilise une div simple au lieu d'un <form> pour bloquer tout rechargement -->
+        <div id="chat-form" class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Écris ton message ici..." autocomplete="off">
+            <button type="button" id="send-btn">Envoyer</button>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
