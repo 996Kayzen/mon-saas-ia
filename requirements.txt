@@ -1,4 +1,4 @@
 flask
-python-dotenv
 groq
 gunicorn
+python-dotenv
