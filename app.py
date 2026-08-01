@@ -220,16 +220,27 @@ def chat():
             cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
                            (conv_id, "assistant", reply))
             
-            # Mettre à jour le titre automatiquement s'il y a 3 messages ou plus (ou si c'est le 1er échange marquant)
+            # Mettre à jour le titre automatiquement via l'IA au début de la conversation
             cursor.execute("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv_id,))
             msg_count = cursor.fetchone()[0]
             if msg_count <= 4:
-                # Générer un titre court et pertinent via l'IA ou utiliser les premiers mots
-                cursor.execute("SELECT content FROM messages WHERE conversation_id = ? AND role = 'user' LIMIT 1", (conv_id,))
-                first_msg = cursor.fetchone()
-                if first_msg:
-                    new_title = (first_msg[0][:28] + '...') if len(first_msg[0]) > 28 else first_msg[0]
-                    cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (new_title, conv_id))
+                try:
+                    title_response = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {"role": "system", "content": "Tu es un assistant qui génère des titres courts (3 à 5 mots maximum, sans guillemets, sans ponctuation finale) pour résumer le sujet de la discussion. Réponds UNIQUEMENT avec le titre."},
+                            {"role": "user", "content": f"Voici le message de l'utilisateur :\n{last_user_msg}\n\nGénère un titre court pour ce sujet."}
+                        ]
+                    )
+                    generated_title = title_response.choices[0].message.content.strip().replace('"', '')
+                    if len(generated_title) > 35:
+                        generated_title = generated_title[:32] + '...'
+                        
+                    cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (generated_title, conv_id))
+                except Exception:
+                    # Fallback si l'appel IA pour le titre échoue
+                    fallback_title = (last_user_msg[:28] + '...') if len(last_user_msg) > 30 else last_user_msg
+                    cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (fallback_title, conv_id))
 
             conn.commit()
             conn.close()
