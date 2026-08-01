@@ -4,25 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SaaS IA</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        body {
+            background-color: #121214;
+            color: #e1e1e6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 85vh;
+            background-color: #202024;
+            border: 1px solid #29292e;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        .chat-header {
+            padding: 20px;
+            background-color: #121214;
+            border-bottom: 1px solid #29292e;
+            text-align: center;
+        }
+        .chat-header h2 {
+            font-size: 1.2rem;
+            color: #00b37e;
+        }
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .message.bot {
+            align-self: flex-start;
+            background-color: #29292e;
+            color: #e1e1e6;
+        }
+        .message.user {
+            align-self: flex-end;
+            background-color: #00875f;
+            color: #ffffff;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 15px;
+            background-color: #121214;
+            border-top: 1px solid #29292e;
+            gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid #29292e;
+            background-color: #202024;
+            color: #e1e1e6;
+            outline: none;
+        }
+        .chat-input-area input:focus {
+            border-color: #00b37e;
+        }
+        .chat-input-area button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00b37e;
+            color: #ffffff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .chat-input-area button:hover {
+            background-color: #00875f;
+        }
+    </style>
 </head>
 <body>
     <div class="chat-container">
         <header class="chat-header">
-            <h2>Assistant IA</h2>
+            <h2>Assistant IA - Mentor Business</h2>
         </header>
 
         <div id="chat-box" class="chat-box">
             <div class="message bot">Bonjour ! Comment puis-je t'aider aujourd'hui ?</div>
         </div>
 
-        <!-- On utilise une div simple au lieu d'un <form> pour bloquer tout rechargement -->
-        <div id="chat-form" class="chat-input-area">
+        <div class="chat-input-area">
             <input type="text" id="user-input" placeholder="Écris ton message ici..." autocomplete="off">
             <button type="button" id="send-btn">Envoyer</button>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const chatBox = document.getElementById('chat-box');
+            let conversationHistory = [];
+
+            function appendMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', sender);
+                messageDiv.textContent = text;
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                return messageDiv;
+            }
+
+            async function handleSendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+
+                appendMessage(message, 'user');
+                conversationHistory.push({ role: "user", content: message });
+                userInput.value = '';
+
+                const loadingMessage = appendMessage('Réflexion en cours...', 'bot');
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ history: conversationHistory })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.reply) {
+                        loadingMessage.textContent = data.reply;
+                        conversationHistory.push({ role: "assistant", content: data.reply });
+                    } else if (data.error) {
+                        loadingMessage.textContent = "Erreur : " + data.error;
+                        conversationHistory.pop();
+                    }
+                } catch (error) {
+                    loadingMessage.textContent = "Impossible de contacter le serveur.";
+                    console.error('Erreur:', error);
+                    conversationHistory.pop();
+                }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            if (sendBtn) sendBtn.addEventListener('click', handleSendMessage);
+            if (userInput) {
+                userInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSendMessage();
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
