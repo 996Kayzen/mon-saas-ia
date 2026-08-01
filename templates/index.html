@@ -18,6 +18,22 @@
             height: 100vh;
             height: 100dvh;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* --- VOILE D'ARRIÈRE-PLAN MOBILE (Effet ChatGPT) --- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 90;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
         }
 
         /* --- MENU LATÉRAL --- */
@@ -27,15 +43,26 @@
             border-right: 1px solid #222228;
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease;
             z-index: 100;
             flex-shrink: 0;
-        }
-        .sidebar.closed {
-            transform: translateX(-100%);
-            position: absolute;
             height: 100%;
         }
+
+        /* Sur mobile, on la positionne en absolute pour pouvoir la glisser */
+        @media (max-width: 767px) {
+            .sidebar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                transform: translateX(-100%); /* Fermée par défaut sur mobile */
+                box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+            }
+            .sidebar-overlay {
+                display: block;
+            }
+        }
+
         .sidebar-header {
             padding: 20px;
             display: flex;
@@ -98,6 +125,7 @@
             height: 100%;
             position: relative;
             background-color: #0c0c0e;
+            min-width: 0;
         }
 
         .top-bar {
@@ -151,12 +179,6 @@
             }
             .toggle-sidebar-btn:hover .custom-icon-bar {
                 background-color: #d4af37;
-            }
-            .sidebar-open-state .custom-icon-bar {
-                background-color: #ffffff;
-            }
-            .sidebar-closed-state .custom-icon-bar {
-                background-color: #a8a8b3;
             }
             .toggle-sidebar-btn::after {
                 content: attr(data-tooltip);
@@ -459,6 +481,9 @@
 </head>
 <body data-is-logged-in="{% if user %}true{% else %}false{% endif %}">
 
+    <!-- VOILE SOMBRE ARRIÈRE-PLAN MOBILE -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <!-- MENU LATÉRAL -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -471,7 +496,7 @@
     <!-- WRAPPER PRINCIPAL -->
     <div class="main-wrapper">
         <header class="top-bar">
-            <button class="toggle-sidebar-btn sidebar-open-state" id="toggle-sidebar" data-tooltip="Fermer la barre latérale">
+            <button class="toggle-sidebar-btn" id="toggle-sidebar" data-tooltip="Barre latérale">
                 <div class="custom-icon-box">
                     <div class="custom-icon-bar"></div>
                 </div>
@@ -553,64 +578,157 @@
             }
 
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
             const toggleBtn = document.getElementById('toggle-sidebar');
             
+            const sidebarWidth = 280;
+            let currentX = window.innerWidth >= 768 ? 0 : -sidebarWidth;
             let isSidebarOpen = window.innerWidth >= 768;
 
-            function applySidebarState() {
-                if (!sidebar || !toggleBtn) return;
-                if (isSidebarOpen) {
-                    sidebar.classList.remove('closed');
-                    toggleBtn.classList.remove('sidebar-closed-state');
-                    toggleBtn.classList.add('sidebar-open-state');
-                    toggleBtn.setAttribute('data-tooltip', 'Fermer la barre latérale');
+            function updateSidebarPosition(x, animate = false, opacityVal = null) {
+                if (window.innerWidth >= 768) return; // Sur desktop, comportement fixe normal
+                
+                if (animate) {
+                    sidebar.style.transition = 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)';
+                    overlay.style.transition = 'opacity 0.3s ease';
                 } else {
-                    sidebar.classList.add('closed');
-                    toggleBtn.classList.remove('sidebar-open-state');
-                    toggleBtn.classList.add('sidebar-closed-state');
-                    toggleBtn.setAttribute('data-tooltip', 'Ouvrir la barre latérale');
+                    sidebar.style.transition = 'none';
+                    overlay.style.transition = 'none';
+                }
+
+                sidebar.style.transform = `translateX(${x}px)`;
+                
+                // Calcul de l'opacité de l'overlay en fonction de la position (-280px = 0, 0px = 1)
+                let percent = (x + sidebarWidth) / sidebarWidth;
+                if (percent < 0) percent = 0;
+                if (percent > 1) percent = 1;
+                
+                if (opacityVal !== null) {
+                    overlay.style.opacity = opacityVal;
+                } else {
+                    overlay.style.opacity = percent;
+                }
+
+                if (percent > 0) {
+                    overlay.style.display = 'block';
+                } else {
+                    overlay.style.display = 'none';
                 }
             }
-            applySidebarState();
 
+            // Initialisation de l'affichage desktop/mobile
+            if (window.innerWidth >= 768) {
+                sidebar.style.transform = 'translateX(0px)';
+                overlay.style.display = 'none';
+            } else {
+                updateSidebarPosition(-sidebarWidth);
+            }
+
+            // Clic sur le bouton rond du haut
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', () => {
-                    isSidebarOpen = !isSidebarOpen;
-                    applySidebarState();
+                    if (window.innerWidth < 768) {
+                        isSidebarOpen = !isSidebarOpen;
+                        let targetX = isSidebarOpen ? 0 : -sidebarWidth;
+                        updateSidebarPosition(targetX, true);
+                    } else {
+                        // Comportement escamotable sur bureau si souhaité
+                        isSidebarOpen = !isSidebarOpen;
+                        sidebar.style.transition = 'transform 0.3s ease';
+                        sidebar.style.transform = isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)';
+                    }
                 });
             }
 
-            // --- GESTION DU TACTILE (SWIPE MOBILE) ---
+            // Clic sur le voile sombre pour fermer
+            if (overlay) {
+                overlay.addEventListener('click', () => {
+                    isSidebarOpen = false;
+                    updateSidebarPosition(-sidebarWidth, true, 0);
+                });
+            }
+
+            // --- GESTION DU TACTILE LIBRE EN TEMPS RÉEL (Type ChatGPT Mobile) ---
             let touchStartX = 0;
             let touchStartY = 0;
+            let initialSidebarX = 0;
+            let isSwiping = false;
 
             document.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-                touchStartY = e.changedTouches[0].screenY;
-            }, { passive: true });
-
-            document.addEventListener('touchend', (e) => {
-                let touchEndX = e.changedTouches[0].screenX;
-                let touchEndY = e.changedTouches[0].screenY;
+                if (window.innerWidth >= 768) return;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
                 
-                let diffX = touchEndX - touchStartX;
-                let diffY = touchEndY - touchStartY;
+                // Permettre de commencer le swipe depuis le bord gauche (zone de tolérance 40px) ou si la sidebar est déjà ouverte
+                let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
+                currentX = matchTransform ? parseFloat(matchTransform[1]) : -sidebarWidth;
+                initialSidebarX = currentX;
 
-                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-                    if (diffX > 0) {
-                        if (!isSidebarOpen) {
-                            isSidebarOpen = true;
-                            applySidebarState();
-                        }
-                    } else {
-                        if (isSidebarOpen) {
-                            isSidebarOpen = false;
-                            applySidebarState();
-                        }
-                    }
+                if (touchStartX < 40 || currentX > -sidebarWidth) {
+                    isSwiping = true;
+                    sidebar.style.transition = 'none';
+                    overlay.style.transition = 'none';
+                } else {
+                    isSwiping = false;
                 }
             }, { passive: true });
 
+            document.addEventListener('touchmove', (e) => {
+                if (!isSwiping || window.innerWidth >= 768) return;
+                
+                let currentTouchX = e.touches[0].clientX;
+                let currentTouchY = e.touches[0].clientY;
+                
+                // Si l'utilisateur scroll verticalement plus qu'horizontalement, on annule le swipe latéral
+                let diffX = currentTouchX - touchStartX;
+                let diffY = Math.abs(currentTouchY - touchStartY);
+                if (diffY > Math.abs(diffX) && initialSidebarX === -sidebarWidth) {
+                    isSwiping = false;
+                    return;
+                }
+
+                let newX = initialSidebarX + diffX;
+                
+                // Empêcher de tirer trop loin vers la gauche ou vers la droite
+                if (newX > 0) newX = 0;
+                if (newX < -sidebarWidth) newX = -sidebarWidth;
+
+                updateSidebarPosition(newX, false);
+            }, { passive: true });
+
+            document.addEventListener('touchend', (e) => {
+                if (!isSwiping || window.innerWidth >= 768) return;
+                isSwiping = false;
+
+                let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
+                let finalX = matchTransform ? parseFloat(matchTransform[1]) : -sidebarWidth;
+
+                // Seuil d'ouverture : si on a glissé à plus de la moitié, ou si le mouvement était rapide
+                let targetX;
+                if (finalX > -sidebarWidth / 2) {
+                    targetX = 0;
+                    isSidebarOpen = true;
+                } else {
+                    targetX = -sidebarWidth;
+                    isSidebarOpen = false;
+                }
+
+                updateSidebarPosition(targetX, true);
+            }, { passive: true });
+
+            // Redimensionnement de la fenêtre
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768) {
+                    sidebar.style.transform = 'translateX(0px)';
+                    overlay.style.display = 'none';
+                } else {
+                    if (!isSidebarOpen) {
+                        updateSidebarPosition(-sidebarWidth);
+                    }
+                }
+            });
+
+            // --- RESTE DU CODE CHAT & AUTH ---
             const modal = document.getElementById('auth-modal');
             const openAuthBtn = document.getElementById('open-auth-modal');
             const closeAuthBtn = document.getElementById('close-auth-modal');
