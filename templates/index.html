@@ -500,22 +500,29 @@
 
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('toggle-sidebar');
-            let isSidebarOpen = true;
+            
+            let isSidebarOpen = window.innerWidth >= 768;
 
-            if (toggleBtn && sidebar) {
+            function applySidebarState() {
+                if (!sidebar || !toggleBtn) return;
+                if (isSidebarOpen) {
+                    sidebar.classList.remove('closed');
+                    toggleBtn.classList.remove('sidebar-closed-state');
+                    toggleBtn.classList.add('sidebar-open-state');
+                    toggleBtn.setAttribute('data-tooltip', 'Fermer la barre latérale');
+                } else {
+                    sidebar.classList.add('closed');
+                    toggleBtn.classList.remove('sidebar-open-state');
+                    toggleBtn.classList.add('sidebar-closed-state');
+                    toggleBtn.setAttribute('data-tooltip', 'Ouvrir la barre latérale');
+                }
+            }
+            applySidebarState();
+
+            if (toggleBtn) {
                 toggleBtn.addEventListener('click', () => {
                     isSidebarOpen = !isSidebarOpen;
-                    if (isSidebarOpen) {
-                        sidebar.classList.remove('closed');
-                        toggleBtn.classList.remove('sidebar-closed-state');
-                        toggleBtn.classList.add('sidebar-open-state');
-                        toggleBtn.setAttribute('data-tooltip', 'Fermer la barre latérale');
-                    } else {
-                        sidebar.classList.add('closed');
-                        toggleBtn.classList.remove('sidebar-open-state');
-                        toggleBtn.classList.add('sidebar-closed-state');
-                        toggleBtn.setAttribute('data-tooltip', 'Ouvrir la barre latérale');
-                    }
+                    applySidebarState();
                 });
             }
 
@@ -651,7 +658,7 @@
                     const res = await fetch(`/api/conversations/${id}/messages`);
                     const messages = await res.json();
                     messages.forEach(m => {
-                        appendMessage(m.content, m.role === 'user' ? 'user' : 'bot');
+                        appendMessage(m.content, m.role === 'user' ? 'user' : 'bot', false);
                         conversationHistory.push({ role: m.role, content: m.content });
                     });
                 } catch (e) { console.error(e); }
@@ -665,7 +672,7 @@
                 if (chatBox) chatBox.innerHTML = '';
                 conversationHistory = localGuestConversations[id].messages || [];
                 conversationHistory.forEach(m => {
-                    appendMessage(m.content, m.role === 'user' ? 'user' : 'bot');
+                    appendMessage(m.content, m.role === 'user' ? 'user' : 'bot', false);
                 });
                 updateWelcomeVisibility();
                 loadConversationsList();
@@ -681,13 +688,17 @@
                 });
             }
 
-            function appendMessage(text, sender) {
+            function appendMessage(text, sender, scrollToElement = true) {
                 if (!chatBox) return;
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message', sender);
                 messageDiv.textContent = text;
                 chatBox.appendChild(messageDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                if (scrollToElement) {
+                    messageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
                 updateWelcomeVisibility();
                 return messageDiv;
             }
@@ -697,12 +708,15 @@
                 const message = userInput.value.trim();
                 if (!message) return;
 
-                appendMessage(message, 'user');
+                appendMessage(message, 'user', true);
                 conversationHistory.push({ role: "user", content: message });
                 userInput.value = '';
 
                 if (!isLoggedIn) {
-                    let title = (message.length > 28) ? message.substring(0, 28) + '...' : message;
+                    let words = message.split(' ').slice(0, 4).join(' ');
+                    let title = (words.length > 25) ? words.substring(0, 25) + '...' : words;
+                    title = title.charAt(0).toUpperCase() + title.slice(1);
+                    
                     localGuestConversations[currentConversationId] = {
                         title: title,
                         messages: conversationHistory
@@ -711,7 +725,7 @@
                     loadConversationsList();
                 }
 
-                const loadingMessage = appendMessage('Réflexion en cours...', 'bot');
+                const loadingMessage = appendMessage('Réflexion en cours...', 'bot', true);
 
                 try {
                     const response = await fetch('/api/chat', {
@@ -743,7 +757,6 @@
                     loadingMessage.textContent = "Impossible de contacter le serveur.";
                 }
 
-                if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
                 userInput.focus();
             }
 

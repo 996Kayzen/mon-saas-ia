@@ -13,7 +13,6 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.getenv("SECRET_KEY", "cle-secrete-par-defaut")
 
-# Configuration de la base de données SQLite (Utilisateurs et Conversations)
 def init_db():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
@@ -48,7 +47,6 @@ def init_db():
 
 init_db()
 
-# Configuration OAuth Google
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
@@ -64,7 +62,17 @@ def get_groq_client():
         raise ValueError("La clé GROQ_API_KEY est manquante.")
     return Groq(api_key=api_key)
 
-SYSTEM_PROMPT = "Tu es un mentor business dynamique, intelligent et ultra-adaptatif."
+SYSTEM_PROMPT = """
+Tu es un Mentor Business expert, dynamique, intelligent et ultra-adaptatif.
+
+Règles de formatage strictes et absolues pour tes réponses :
+1. Puces et Citations : N'utilise jamais de simples tirets (-) pour tes listes principales. Utilise toujours des points distincts ou en gras (par exemple **•**).
+2. Listes et Énumérations : Dès que l'utilisateur demande une liste (ou que le contexte l'implique, même sans le mot "liste"), chaque élément de la liste doit obligatoirement commencer par un titre court en gras, suivi d'une description concise.
+3. Niveau de détail élevé : Plus l'utilisateur demande ou insinue qu'il veut des détails / de l'approfondissement :
+   - Conserve le titre principal en gras pour chaque point.
+   - Structure la description avec soin pour ne pas faire mal aux yeux et garder une lecture aérée.
+   - Si un point comporte plusieurs sous-parties, utilise un tiret (-) uniquement pour chaque sous-partie à l'intérieur de ce point, en sautant les lignes proprement.
+"""
 
 @app.route('/')
 def home():
@@ -81,7 +89,6 @@ def authorize():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo')
     user_info = resp.json()
-    # Normalisation pour avoir un ID unique stable
     session['user'] = {
         "id": "google_" + str(user_info.get('sub')),
         "name": user_info.get('name'),
@@ -94,7 +101,6 @@ def logout():
     session.pop('user', None)
     return redirect('/')
 
-# Routes d'authentification par email
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -142,7 +148,6 @@ def login_email():
     else:
         return jsonify({"error": "Email ou mot de passe incorrect."}), 401
 
-# API de gestion des conversations et messages
 @app.route('/api/conversations', methods=['GET'])
 def get_conversations():
     user = session.get('user')
@@ -202,12 +207,10 @@ def chat():
         )
         reply = response.choices[0].message.content
 
-        # Sauvegarde en base si l'utilisateur est connecté
         if user and conv_id and len(history) > 0:
             conn = sqlite3.connect('users.db')
             cursor = conn.cursor()
             
-            # Vérifier si la conversation existe, sinon la créer
             cursor.execute("SELECT id, title FROM conversations WHERE id = ?", (conv_id,))
             conv_row = cursor.fetchone()
             if not conv_row:
@@ -217,21 +220,23 @@ def chat():
             else:
                 current_title = conv_row[1]
 
-            # Insérer le dernier message utilisateur et la réponse de l'IA
             last_user_msg = history[-1]['content']
             cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
                            (conv_id, "user", last_user_msg))
             cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
                            (conv_id, "assistant", reply))
             
-            # Générer le titre par l'IA uniquement si la conversation n'a pas encore de vrai titre
             if current_title == "Nouvelle discussion":
                 try:
+                    cursor.execute("SELECT role, content FROM messages WHERE conversation_id = ? LIMIT 4", (conv_id,))
+                    context_rows = cursor.fetchall()
+                    conversation_snippet = "\n".join([f"{r[0]}: {r[1]}" for r in context_rows])
+
                     title_response = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=[
-                            {"role": "system", "content": "Tu es un assistant qui génère des titres courts (3 à 5 mots maximum, sans guillemets, sans ponctuation finale) pour résumer le sujet de la discussion. Réponds UNIQUEMENT avec le titre."},
-                            {"role": "user", "content": f"Voici le message de l'utilisateur :\n{last_user_msg}\n\nGénère un titre court pour ce sujet."}
+                            {"role": "system", "content": "Tu es un expert en résumé. Analyse l'échange et génère un titre court et percutant de 3 à 5 mots maximum (sans guillemets, sans ponctuation finale, orienté métier/thème) pour nommer la discussion."},
+                            {"role": "user", "content": f"Voici les premiers messages de la discussion :\n{conversation_snippet}\n\nDonne un titre thématique court :"}
                         ]
                     )
                     generated_title = title_response.choices[0].message.content.strip().replace('"', '')
@@ -239,10 +244,8 @@ def chat():
                         generated_title = generated_title[:32] + '...'
                         
                     cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (generated_title, conv_id))
-                except Exception:
-                    # Fallback si l'appel IA échoue
-                    fallback_title = (last_user_msg[:28] + '...') if len(last_user_msg) > 30 else last_user_msg
-                    cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (fallback_title, conv_id))
+                except Exception as e:
+                    print("Erreur titre:", e)
 
             conn.commit()
             conn.close()
