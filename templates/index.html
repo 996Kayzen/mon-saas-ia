@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SaaS IA</title>
     <style>
         * {
@@ -17,13 +17,16 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            height: 100vh;
+            height: 100dvh;
+            padding: 10px;
+            overflow: hidden;
         }
         .chat-container {
             width: 100%;
             max-width: 800px;
-            height: 85vh;
+            height: 100%;
+            max-height: 85vh;
             background-color: #202024;
             border: 1px solid #29292e;
             border-radius: 12px;
@@ -33,15 +36,16 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
         .chat-header {
-            padding: 20px;
+            padding: 15px 20px;
             background-color: #121214;
             border-bottom: 1px solid #29292e;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
         .chat-header h2 {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: #00b37e;
         }
         .auth-section {
@@ -80,6 +84,7 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            -webkit-overflow-scrolling: touch;
         }
         .message {
             max-width: 80%;
@@ -106,6 +111,7 @@
             background-color: #121214;
             border-top: 1px solid #29292e;
             gap: 10px;
+            flex-shrink: 0;
         }
         .chat-input-area input {
             flex: 1;
@@ -115,18 +121,20 @@
             background-color: #202024;
             color: #e1e1e6;
             outline: none;
+            font-size: 16px; /* Empêche le zoom automatique sur iOS */
         }
         .chat-input-area input:focus {
             border-color: #00b37e;
         }
         .chat-input-area button {
-            padding: 12px 24px;
+            padding: 12px 20px;
             border: none;
             border-radius: 6px;
             background-color: #00b37e;
             color: #ffffff;
             font-weight: bold;
             cursor: pointer;
+            flex-shrink: 0;
         }
         .chat-input-area button:hover {
             background-color: #00875f;
@@ -137,13 +145,15 @@
     <div class="chat-container">
         <header class="chat-header">
             <h2>Assistant IA - Mentor Business</h2>
-            <div class="auth-section">
-                {% if user %}
-                    <span>Bonjour, {{ user.name }}</span>
-                    <a href="/logout" class="btn-logout">Déconnexion</a>
-                {% else %}
-                    <a href="/login" class="btn-google">Se connecter avec Google</a>
-                {% endif %}
+            <div class="auth-search">
+                <div class="auth-section">
+                    {% if user %}
+                        <span>Bonjour, {{ user.name }}</span>
+                        <a href="/logout" class="btn-logout">Déconnexion</a>
+                    {% else %}
+                        <a href="/login" class="btn-google">Se connecter avec Google</a>
+                    {% endif %}
+                </div>
             </div>
         </header>
 
@@ -201,11 +211,11 @@
                     }
                 } catch (error) {
                     loadingMessage.textContent = "Impossible de contacter le serveur.";
-                    console.error('Erreur:', error);
-                    conversationHistory.pop();
                 }
 
                 chatBox.scrollTop = chatBox.scrollHeight;
+                // Redonne le focus proprement et force le défilement
+                userInput.focus();
             }
 
             if (sendBtn) sendBtn.addEventListener('click', handleSendMessage);
