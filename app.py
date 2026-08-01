@@ -1,15 +1,34 @@
 import os
+import sqlite3
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from dotenv import load_dotenv
 from groq import Groq
 from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.getenv("SECRET_KEY", "cle-secrete-par-defaut")
+
+# Configuration de la base de données SQLite pour les utilisateurs par email
+def init_db():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            email TEXT UNIQUE,
+            password TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # Configuration OAuth Google
 oauth = OAuth(app)
@@ -51,6 +70,54 @@ def authorize():
 def logout():
     session.pop('user', None)
     return redirect('/')
+
+# Nouvelles routes pour l'inscription et la connexion par email
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.json
+    name = data.get('name', 'Utilisateur')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email et mot de passe requis"}), 400
+
+    hashed_password = generate_password_hash(password)
+    user_id = "email_" + email
+
+    try:
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)",
+                       (user_id, name, email, hashed_password))
+        conn.commit()
+        conn.close()
+        
+        session['user'] = {"id": user_id, "name": name, "email": email}
+        return jsonify({"success": True})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Cet email est déjà utilisé."}), 400
+
+@app.route('/api/login-email', methods=['POST'])
+def login_email():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email et mot de passe requis"}), 400
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email, password FROM users WHERE email = ?", (email,))
+    user_row = cursor.fetchone()
+    conn.close()
+
+    if user_row and check_password_hash(user_row[3], password):
+        session['user'] = {"id": user_row[0], "name": user_row[1], "email": user_row[2]}
+        return jsonify({"success": True})
+    else:
+        return jsonify({"error": "Email ou mot de passe incorrect."}), 401
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
