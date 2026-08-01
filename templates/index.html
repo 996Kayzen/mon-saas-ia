@@ -107,20 +107,25 @@
             align-items: center;
             flex-shrink: 0;
         }
+        
+        /* --- BOUTON TOGGLE EN FORME DE ROND --- */
         .toggle-sidebar-btn {
-            background: none;
-            border: none;
+            background: #141417;
+            border: 1px solid #282830;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: border-color 0.2s, background-color 0.2s;
         }
         .custom-icon-box {
-            width: 22px;
-            height: 18px;
+            width: 20px;
+            height: 16px;
             border: 2px solid #a8a8b3;
             border-radius: 3px;
             position: relative;
@@ -137,6 +142,10 @@
         }
 
         @media (min-width: 768px) {
+            .toggle-sidebar-btn:hover {
+                border-color: #d4af37;
+                background-color: #1a1a20;
+            }
             .toggle-sidebar-btn:hover .custom-icon-box {
                 border-color: #d4af37;
             }
@@ -147,12 +156,12 @@
                 background-color: #ffffff;
             }
             .sidebar-closed-state .custom-icon-bar {
-                background-color: #141417;
+                background-color: #a8a8b3;
             }
             .toggle-sidebar-btn::after {
                 content: attr(data-tooltip);
                 position: absolute;
-                top: 45px;
+                top: 48px;
                 left: 0;
                 background-color: #202028;
                 color: #e1e1e6;
@@ -173,6 +182,9 @@
         }
 
         @media (max-width: 767px) {
+            .toggle-sidebar-btn {
+                border-color: #332b0f;
+            }
             .custom-icon-box {
                 border-color: #d4af37 !important;
             }
@@ -568,6 +580,37 @@
                 });
             }
 
+            // --- GESTION DU TACTILE (SWIPE MOBILE) ---
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            document.addEventListener('touchend', (e) => {
+                let touchEndX = e.changedTouches[0].screenX;
+                let touchEndY = e.changedTouches[0].screenY;
+                
+                let diffX = touchEndX - touchStartX;
+                let diffY = touchEndY - touchStartY;
+
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                    if (diffX > 0) {
+                        if (!isSidebarOpen) {
+                            isSidebarOpen = true;
+                            applySidebarState();
+                        }
+                    } else {
+                        if (isSidebarOpen) {
+                            isSidebarOpen = false;
+                            applySidebarState();
+                        }
+                    }
+                }
+            }, { passive: true });
+
             const modal = document.getElementById('auth-modal');
             const openAuthBtn = document.getElementById('open-auth-modal');
             const closeAuthBtn = document.getElementById('close-auth-modal');
@@ -665,7 +708,6 @@
                 }
             }
 
-            // Gestion de l'affichage du bouton défiler vers le bas
             if (chatBox) {
                 chatBox.addEventListener('scroll', () => {
                     const scrollPosition = chatBox.scrollTop + chatBox.clientHeight;
@@ -684,13 +726,11 @@
                 });
             }
 
-            // Fonction de nettoyage du texte (suppression des tirets isolés ou mal placés)
             function cleanTextContent(text) {
                 if (!text) return "";
                 let lines = text.split('\n');
                 let cleanedLines = lines.filter(line => {
                     let trimmed = line.trim();
-                    // Supprime les lignes qui contiennent uniquement des tirets orphelins (ex: "-" ou "--")
                     if (/^-+$/.test(trimmed)) {
                         return false;
                     }
@@ -730,7 +770,6 @@
                 currentConversationId = id;
                 conversationHistory = [];
                 if (chatBox) {
-                    // Conserver le bouton scroll bottom s'il est dedans, vider le reste des messages
                     const messages = chatBox.querySelectorAll('.message');
                     messages.forEach(m => m.remove());
                 }
@@ -779,11 +818,7 @@
                 if (!chatBox) return;
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message', sender);
-                
-                // Nettoyage automatique des tirets orphelins avant l'affichage
                 messageDiv.textContent = cleanTextContent(text);
-                
-                // Insérer avant le bouton de scroll bottom pour garder l'ordre correct
                 chatBox.insertBefore(messageDiv, scrollBottomBtn);
                 
                 if (scrollToElement) {
