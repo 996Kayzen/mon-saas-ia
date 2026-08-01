@@ -13,7 +13,7 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.getenv("SECRET_KEY", "cle-secrete-par-defaut")
 
-# Configuration de la base de données SQLite pour les utilisateurs par email
+# Configuration de la base de données SQLite (Utilisateurs et Conversations)
 def init_db():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
@@ -23,6 +23,24 @@ def init_db():
             name TEXT,
             email TEXT UNIQUE,
             password TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            title TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT,
+            role TEXT,
+            content TEXT,
+            FOREIGN KEY (conversation_id) REFERENCES conversations (id)
         )
     ''')
     conn.commit()
@@ -63,7 +81,12 @@ def authorize():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo')
     user_info = resp.json()
-    session['user'] = user_info
+    # Normalisation pour avoir un ID unique stable
+    session['user'] = {
+        "id": "google_" + str(user_info.get('sub')),
+        "name": user_info.get('name'),
+        "email": user_info.get('email')
+    }
     return redirect('/')
 
 @app.route('/logout')
@@ -71,7 +94,7 @@ def logout():
     session.pop('user', None)
     return redirect('/')
 
-# Routes pour l'inscription et la connexion par email
+# Routes d'authentification par email
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -119,17 +142,99 @@ def login_email():
     else:
         return jsonify({"error": "Email ou mot de passe incorrect."}), 401
 
+# API de gestion des conversations et messages
+@app.route('/api/conversations', methods=['GET'])
+def get_conversations():
+    user = session.get('user')
+    if not user:
+        return jsonify([])
+    
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title FROM conversations WHERE user_id = ? ORDER BY created_at DESC", (user['id'],))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    convs = [{"id": r[0], "title": r[1]} for r in rows]
+    return jsonify(convs)
+
+@app.route('/api/conversations', methods=['POST'])
+def create_conversation():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Non authentifié"}), 401
+        
+    data = request.json
+    conv_id = data.get('id')
+    title = data.get('title', 'Nouvelle discussion')
+    
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO conversations (id, user_id, title) VALUES (?, ?, ?)",
+                   (conv_id, user['id'], title))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+@app.route('/api/conversations/<conv_id>/messages', methods=['GET'])
+def get_messages(conv_id):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY id ASC", (conv_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    messages = [{"role": r[0], "content": r[1]} for r in rows]
+    return jsonify(messages)
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     data = request.get_json()
     history = data.get('history', [])
+    conv_id = data.get('conversation_id')
+    user = session.get('user')
+
     try:
         client = get_groq_client()
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history
         )
-        return jsonify({'reply': response.choices[0].message.content})
+        reply = response.choices[0].message.content
+
+        # Sauvegarde en base si l'utilisateur est connecté
+        if user and conv_id and len(history) > 0:
+            conn = sqlite3.connect('users.db')
+            cursor = conn.cursor()
+            
+            # Vérifier si la conversation existe, sinon la créer
+            cursor.execute("SELECT id FROM conversations WHERE id = ?", (conv_id,))
+            if not cursor.fetchone():
+                cursor.execute("INSERT INTO conversations (id, user_id, title) VALUES (?, ?, ?)",
+                               (conv_id, user['id'], "Nouvelle discussion"))
+
+            # Insérer le dernier message utilisateur et la réponse de l'IA
+            last_user_msg = history[-1]['content']
+            cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+                           (conv_id, "user", last_user_msg))
+            cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+                           (conv_id, "assistant", reply))
+            
+            # Mettre à jour le titre automatiquement s'il y a 3 messages ou plus (ou si c'est le 1er échange marquant)
+            cursor.execute("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv_id,))
+            msg_count = cursor.fetchone()[0]
+            if msg_count <= 4:
+                # Générer un titre court et pertinent via l'IA ou utiliser les premiers mots
+                cursor.execute("SELECT content FROM messages WHERE conversation_id = ? AND role = 'user' LIMIT 1", (conv_id,))
+                first_msg = cursor.fetchone()
+                if first_msg:
+                    new_title = (first_msg[0][:28] + '...') if len(first_msg[0]) > 28 else first_msg[0]
+                    cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (new_title, conv_id))
+
+            conn.commit()
+            conn.close()
+
+        return jsonify({'reply': reply})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
