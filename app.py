@@ -209,6 +209,7 @@ def chat():
             conn = sqlite3.connect('users.db')
             cursor = conn.cursor()
             
+            # 1. Vérifier si la conversation existe, sinon la créer
             cursor.execute("SELECT id, title FROM conversations WHERE id = ?", (conv_id,))
             conv_row = cursor.fetchone()
             if not conv_row:
@@ -218,12 +219,28 @@ def chat():
             else:
                 current_title = conv_row[1]
 
+            # 2. Récupérer le dernier message envoyé par l'utilisateur
             last_user_msg = history[-1]['content']
-            cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-                           (conv_id, "user", last_user_msg))
-            cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-                           (conv_id, "assistant", reply))
+
+            # 3. Vérifier si ce message exact n'a pas déjà été enregistré juste avant (anti-duplication)
+            cursor.execute("SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 2", (conv_id,))
+            last_msgs = cursor.fetchall()
             
+            already_exists = False
+            if last_msgs:
+                # Si le dernier message en base est identique au message utilisateur actuel
+                if any(m[0] == 'user' and m[1] == last_user_msg for m in last_msgs):
+                    already_exists = True
+
+            # S'il n'existe pas encore en base, on l'ajoute proprement
+            if not already_exists:
+                cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+                               (conv_id, "user", last_user_msg))
+                cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+                               (conv_id, "assistant", reply))
+                conn.commit()
+
+            # 4. Génération automatique d'un titre intelligent si c'est une "Nouvelle discussion"
             if current_title == "Nouvelle discussion":
                 try:
                     cursor.execute("SELECT role, content FROM messages WHERE conversation_id = ? LIMIT 4", (conv_id,))
@@ -242,10 +259,10 @@ def chat():
                         generated_title = generated_title[:32] + '...'
                         
                     cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (generated_title, conv_id))
+                    conn.commit()
                 except Exception as e:
-                    print("Erreur titre:", e)
+                    print("Erreur génération titre:", e)
 
-            conn.commit()
             conn.close()
 
         return jsonify({'reply': reply})
@@ -255,4 +272,3 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
