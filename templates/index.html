@@ -57,17 +57,19 @@
             font-size: 0.85rem;
             color: #e1e1e6;
         }
-        .btn-google {
-            background-color: #4285F4;
+        .btn-auth-main {
+            background-color: #00b37e;
             color: #ffffff;
             padding: 6px 12px;
             border-radius: 4px;
+            border: none;
             text-decoration: none;
             font-size: 0.85rem;
             font-weight: bold;
+            cursor: pointer;
         }
-        .btn-google:hover {
-            background-color: #357ae8;
+        .btn-auth-main:hover {
+            background-color: #00875f;
         }
         .btn-logout {
             color: #ff5555;
@@ -139,6 +141,98 @@
         .chat-input-area button:hover {
             background-color: #00875f;
         }
+
+        /* Styles de la Fenêtre Modale (Popup Auth) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+        .modal-content {
+            background-color: #202024;
+            border: 1px solid #29292e;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px; right: 15px;
+            background: none; border: none;
+            color: #a8a8b3; font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid #29292e;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+        .modal-tab {
+            background: none; border: none;
+            color: #a8a8b3; font-size: 1rem;
+            padding-bottom: 10px; cursor: pointer;
+            font-weight: bold;
+        }
+        .modal-tab.active {
+            color: #00b37e;
+            border-bottom: 2px solid #00b37e;
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .auth-form input {
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #29292e;
+            background-color: #121214;
+            color: #e1e1e6;
+            font-size: 16px;
+            outline: none;
+        }
+        .auth-form input:focus {
+            border-color: #00b37e;
+        }
+        .btn-submit {
+            background-color: #00b37e;
+            color: #fff; padding: 12px;
+            border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer;
+        }
+        .btn-submit:hover { background-color: #00875f; }
+        .divider {
+            text-align: center; color: #a8a8b3; font-size: 0.85rem;
+            position: relative; margin: 5px 0;
+        }
+        .divider::before, .divider::after {
+            content: ""; position: absolute; top: 50%; width: 40%; height: 1px; background-color: #29292e;
+        }
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        .btn-google-modal {
+            background-color: #4285F4; color: #fff;
+            padding: 12px; border-radius: 6px;
+            text-decoration: none; text-align: center;
+            font-weight: bold; font-size: 0.9rem;
+            display: block;
+        }
+        .btn-google-modal:hover { background-color: #357ae8; }
+        .error-msg {
+            color: #ff5555; font-size: 0.85rem; text-align: center; display: none;
+        }
     </style>
 </head>
 <body>
@@ -151,7 +245,7 @@
                         <span>Bonjour, {{ user.name }}</span>
                         <a href="/logout" class="btn-logout">Déconnexion</a>
                     {% else %}
-                        <a href="/login" class="btn-google">Se connecter avec Google</a>
+                        <button type="button" class="btn-auth-main" id="open-auth-modal">Se connecter / S'inscrire</button>
                     {% endif %}
                 </div>
             </div>
@@ -167,8 +261,131 @@
         </div>
     </div>
 
+    <!-- Fenêtre Modale d'Authentification -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="close-auth-modal">&times;</button>
+            <div class="modal-tabs">
+                <button class="modal-tab active" data-target="login-form-container">Connexion</button>
+                <button class="modal-tab" data-target="register-form-container">Inscription</button>
+            </div>
+
+            <p class="error-msg" id="modal-error"></p>
+
+            <!-- Formulaire de Connexion Email -->
+            <div id="login-form-container" class="auth-form-container">
+                <form id="login-form" class="auth-form">
+                    <input type="email" id="login-email" placeholder="Adresse email" required>
+                    <input type="password" id="login-password" placeholder="Mot de passe" required>
+                    <button type="submit" class="btn-submit">Se connecter</button>
+                </form>
+            </div>
+
+            <!-- Formulaire d'Inscription Email -->
+            <div id="register-form-container" class="auth-form-container" style="display: none;">
+                <form id="register-form" class="auth-form">
+                    <input type="text" id="register-name" placeholder="Votre prénom / nom" required>
+                    <input type="email" id="register-email" placeholder="Adresse email" required>
+                    <input type="password" id="register-password" placeholder="Mot de passe" required>
+                    <button type="submit" class="btn-submit">S'inscrire</button>
+                </form>
+            </div>
+
+            <div class="divider">ou</div>
+            <a href="/login" class="btn-google-modal">Se connecter avec Google</a>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Gestion de la modale
+            const modal = document.getElementById('auth-modal');
+            const openBtn = document.getElementById('open-auth-modal');
+            const closeBtn = document.getElementById('close-auth-modal');
+            const tabs = document.querySelectorAll('.modal-tab');
+            const loginContainer = document.getElementById('login-form-container');
+            const registerContainer = document.getElementById('register-form-container');
+            const errorMsg = document.getElementById('modal-error');
+
+            if (openBtn) {
+                openBtn.addEventListener('click', () => modal.style.display = 'flex');
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => modal.style.display = 'none');
+            }
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            });
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    errorMsg.style.display = 'none';
+                    if (tab.dataset.target === 'login-form-container') {
+                        loginContainer.style.display = 'block';
+                        registerContainer.style.display = 'none';
+                    } else {
+                        loginContainer.style.display = 'none';
+                        registerContainer.style.display = 'block';
+                    }
+                });
+            });
+
+            // Soumission Connexion Email
+            document.getElementById('login-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMsg.style.display = 'none';
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+
+                try {
+                    const res = await fetch('/api/login-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        window.location.reload();
+                    } else {
+                        errorMsg.textContent = data.error || "Erreur de connexion";
+                        errorMsg.style.display = 'block';
+                    }
+                } catch (err) {
+                    errorMsg.textContent = "Erreur réseau.";
+                    errorMsg.style.display = 'block';
+                }
+            });
+
+            // Soumission Inscription Email
+            document.getElementById('register-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMsg.style.display = 'none';
+                const name = document.getElementById('register-name').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+
+                try {
+                    const res = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        window.location.reload();
+                    } else {
+                        errorMsg.textContent = data.error || "Erreur lors de l'inscription";
+                        errorMsg.style.display = 'block';
+                    }
+                } catch (err) {
+                    errorMsg.textContent = "Erreur réseau.";
+                    errorMsg.style.display = 'block';
+                }
+            });
+
+            // Logique du chat
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
