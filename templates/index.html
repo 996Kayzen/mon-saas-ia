@@ -136,7 +136,6 @@
             transition: background-color 0.2s;
         }
 
-        /* Comportement sur PC (Hover) */
         @media (min-width: 768px) {
             .toggle-sidebar-btn:hover .custom-icon-box {
                 border-color: #d4af37;
@@ -173,7 +172,6 @@
             }
         }
 
-        /* Forçage permanent du logo en JAUNE SUR MOBILE */
         @media (max-width: 767px) {
             .custom-icon-box {
                 border-color: #d4af37 !important;
@@ -233,6 +231,34 @@
             max-width: 800px;
             width: 100%;
             margin: 0 auto;
+            position: relative;
+        }
+
+        /* --- BOUTON RETOUR EN BAS --- */
+        .scroll-bottom-btn {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background-color: #1a1a20;
+            color: #d4af37;
+            border: 1px solid #332b0f;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.75;
+            transition: opacity 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 50;
+            display: none;
+        }
+        .scroll-bottom-btn:hover {
+            opacity: 0.85;
+            background-color: #22222a;
         }
 
         .welcome-greeting-container {
@@ -453,7 +479,10 @@
                 <h1 class="welcome-greeting" id="gold-greeting">Par quoi commençons-nous aujourd'hui ?</h1>
             </div>
 
-            <div id="chat-box" class="chat-box"></div>
+            <div id="chat-box" class="chat-box">
+                <!-- Bouton pour défiler vers le bas -->
+                <button class="scroll-bottom-btn" id="scroll-bottom-btn" title="Aller tout en bas">&#8595;</button>
+            </div>
 
             <div class="chat-input-container">
                 <div class="chat-input-wrapper">
@@ -620,6 +649,7 @@
             const historyList = document.getElementById('history-list');
             const newChatBtn = document.getElementById('new-chat-btn');
             const welcomeContainer = document.getElementById('welcome-container');
+            const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
 
             const isLoggedIn = document.body.getAttribute('data-is-logged-in') === 'true';
             let currentConversationId = 'conv_' + Date.now();
@@ -628,11 +658,45 @@
 
             function updateWelcomeVisibility() {
                 if (!chatBox || !welcomeContainer) return;
-                if (chatBox.children.length === 0) {
+                if (chatBox.querySelectorAll('.message').length === 0) {
                     welcomeContainer.style.display = 'block';
                 } else {
                     welcomeContainer.style.display = 'none';
                 }
+            }
+
+            // Gestion de l'affichage du bouton défiler vers le bas
+            if (chatBox) {
+                chatBox.addEventListener('scroll', () => {
+                    const scrollPosition = chatBox.scrollTop + chatBox.clientHeight;
+                    const bottomThreshold = chatBox.scrollHeight - 100;
+                    if (scrollPosition < bottomThreshold) {
+                        scrollBottomBtn.style.display = 'flex';
+                    } else {
+                        scrollBottomBtn.style.display = 'none';
+                    }
+                });
+            }
+
+            if (scrollBottomBtn) {
+                scrollBottomBtn.addEventListener('click', () => {
+                    chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+                });
+            }
+
+            // Fonction de nettoyage du texte (suppression des tirets isolés ou mal placés)
+            function cleanTextContent(text) {
+                if (!text) return "";
+                let lines = text.split('\n');
+                let cleanedLines = lines.filter(line => {
+                    let trimmed = line.trim();
+                    // Supprime les lignes qui contiennent uniquement des tirets orphelins (ex: "-" ou "--")
+                    if (/^-+$/.test(trimmed)) {
+                        return false;
+                    }
+                    return true;
+                });
+                return cleanedLines.join('\n').trim();
             }
 
             async function loadConversationsList() {
@@ -665,7 +729,11 @@
             async function switchToConversation(id, title) {
                 currentConversationId = id;
                 conversationHistory = [];
-                if (chatBox) chatBox.innerHTML = '';
+                if (chatBox) {
+                    // Conserver le bouton scroll bottom s'il est dedans, vider le reste des messages
+                    const messages = chatBox.querySelectorAll('.message');
+                    messages.forEach(m => m.remove());
+                }
                 
                 try {
                     const res = await fetch(`/api/conversations/${id}/messages`);
@@ -682,7 +750,10 @@
 
             function switchToGuestConversation(id) {
                 currentConversationId = id;
-                if (chatBox) chatBox.innerHTML = '';
+                if (chatBox) {
+                    const messages = chatBox.querySelectorAll('.message');
+                    messages.forEach(m => m.remove());
+                }
                 conversationHistory = localGuestConversations[id].messages || [];
                 conversationHistory.forEach(m => {
                     appendMessage(m.content, m.role === 'user' ? 'user' : 'bot', false);
@@ -695,7 +766,10 @@
                 newChatBtn.addEventListener('click', () => {
                     currentConversationId = 'conv_' + Date.now();
                     conversationHistory = [];
-                    if (chatBox) chatBox.innerHTML = '';
+                    if (chatBox) {
+                        const messages = chatBox.querySelectorAll('.message');
+                        messages.forEach(m => m.remove());
+                    }
                     updateWelcomeVisibility();
                     loadConversationsList();
                 });
@@ -705,8 +779,12 @@
                 if (!chatBox) return;
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message', sender);
-                messageDiv.textContent = text;
-                chatBox.appendChild(messageDiv);
+                
+                // Nettoyage automatique des tirets orphelins avant l'affichage
+                messageDiv.textContent = cleanTextContent(text);
+                
+                // Insérer avant le bouton de scroll bottom pour garder l'ordre correct
+                chatBox.insertBefore(messageDiv, scrollBottomBtn);
                 
                 if (scrollToElement) {
                     messageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -753,7 +831,7 @@
                     const data = await response.json();
 
                     if (data.reply) {
-                        loadingMessage.textContent = data.reply;
+                        loadingMessage.textContent = cleanTextContent(data.reply);
                         conversationHistory.push({ role: "assistant", content: data.reply });
                         
                         if (!isLoggedIn) {
