@@ -208,10 +208,14 @@ def chat():
             cursor = conn.cursor()
             
             # Vérifier si la conversation existe, sinon la créer
-            cursor.execute("SELECT id FROM conversations WHERE id = ?", (conv_id,))
-            if not cursor.fetchone():
+            cursor.execute("SELECT id, title FROM conversations WHERE id = ?", (conv_id,))
+            conv_row = cursor.fetchone()
+            if not conv_row:
                 cursor.execute("INSERT INTO conversations (id, user_id, title) VALUES (?, ?, ?)",
                                (conv_id, user['id'], "Nouvelle discussion"))
+                current_title = "Nouvelle discussion"
+            else:
+                current_title = conv_row[1]
 
             # Insérer le dernier message utilisateur et la réponse de l'IA
             last_user_msg = history[-1]['content']
@@ -220,10 +224,8 @@ def chat():
             cursor.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
                            (conv_id, "assistant", reply))
             
-            # Mettre à jour le titre automatiquement via l'IA au début de la conversation
-            cursor.execute("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv_id,))
-            msg_count = cursor.fetchone()[0]
-            if msg_count <= 4:
+            # Générer le titre par l'IA uniquement si la conversation n'a pas encore de vrai titre
+            if current_title == "Nouvelle discussion":
                 try:
                     title_response = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
@@ -238,7 +240,7 @@ def chat():
                         
                     cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (generated_title, conv_id))
                 except Exception:
-                    # Fallback si l'appel IA pour le titre échoue
+                    # Fallback si l'appel IA échoue
                     fallback_title = (last_user_msg[:28] + '...') if len(last_user_msg) > 30 else last_user_msg
                     cursor.execute("UPDATE conversations SET title = ? WHERE id = ?", (fallback_title, conv_id))
 
