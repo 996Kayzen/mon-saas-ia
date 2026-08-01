@@ -71,7 +71,7 @@ def logout():
     session.pop('user', None)
     return redirect('/')
 
-# Nouvelles routes pour l'inscription et la connexion par email
+# Routes pour l'inscription et la connexion par email
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
