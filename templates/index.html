@@ -135,39 +135,52 @@
             background-color: #a8a8b3;
             transition: background-color 0.2s;
         }
-        .toggle-sidebar-btn:hover .custom-icon-box {
-            border-color: #d4af37;
-        }
-        .toggle-sidebar-btn:hover .custom-icon-bar {
-            background-color: #d4af37;
-        }
-        .sidebar-open-state .custom-icon-bar {
-            background-color: #ffffff;
-        }
-        .sidebar-closed-state .custom-icon-bar {
-            background-color: #141417;
+
+        /* Comportement sur PC (Hover) */
+        @media (min-width: 768px) {
+            .toggle-sidebar-btn:hover .custom-icon-box {
+                border-color: #d4af37;
+            }
+            .toggle-sidebar-btn:hover .custom-icon-bar {
+                background-color: #d4af37;
+            }
+            .sidebar-open-state .custom-icon-bar {
+                background-color: #ffffff;
+            }
+            .sidebar-closed-state .custom-icon-bar {
+                background-color: #141417;
+            }
+            .toggle-sidebar-btn::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                top: 45px;
+                left: 0;
+                background-color: #202028;
+                color: #e1e1e6;
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                border-radius: 4px;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s;
+                border: 1px solid #33333d;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                z-index: 10;
+            }
+            .toggle-sidebar-btn:hover::after {
+                opacity: 1;
+            }
         }
 
-        .toggle-sidebar-btn::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            top: 45px;
-            left: 0;
-            background-color: #202028;
-            color: #e1e1e6;
-            padding: 4px 8px;
-            font-size: 0.75rem;
-            border-radius: 4px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            border: 1px solid #33333d;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 10;
-        }
-        .toggle-sidebar-btn:hover::after {
-            opacity: 1;
+        /* Forçage permanent du logo en JAUNE SUR MOBILE */
+        @media (max-width: 767px) {
+            .custom-icon-box {
+                border-color: #d4af37 !important;
+            }
+            .custom-icon-bar {
+                background-color: #d4af37 !important;
+            }
         }
 
         .auth-section {
