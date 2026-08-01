@@ -1,4 +1,6 @@
-flask
-groq
+Flask
 gunicorn
 python-dotenv
+groq
+Authlib
+requests
