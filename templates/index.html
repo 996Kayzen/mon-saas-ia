@@ -36,11 +36,42 @@
             padding: 20px;
             background-color: #121214;
             border-bottom: 1px solid #29292e;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .chat-header h2 {
             font-size: 1.2rem;
             color: #00b37e;
+        }
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .auth-section span {
+            font-size: 0.85rem;
+            color: #e1e1e6;
+        }
+        .btn-google {
+            background-color: #4285F4;
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .btn-google:hover {
+            background-color: #357ae8;
+        }
+        .btn-logout {
+            color: #ff5555;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .btn-logout:hover {
+            text-decoration: underline;
         }
         .chat-box {
             flex: 1;
@@ -106,6 +137,14 @@
     <div class="chat-container">
         <header class="chat-header">
             <h2>Assistant IA - Mentor Business</h2>
+            <div class="auth-section">
+                {% if user %}
+                    <span>Bonjour, {{ user.name }}</span>
+                    <a href="/logout" class="btn-logout">Déconnexion</a>
+                {% else %}
+                    <a href="/login" class="btn-google">Se connecter avec Google</a>
+                {% endif %}
+            </div>
         </header>
 
         <div id="chat-box" class="chat-box">
