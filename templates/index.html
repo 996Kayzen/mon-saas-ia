@@ -354,6 +354,13 @@
             z-index: 30;
         }
 
+        /* Ajustement hauteur/remontée sur mobile pour éviter les barres du navigateur */
+        @media (max-width: 767px) {
+            .chat-input-container {
+                bottom: 25px;
+            }
+        }
+
         .chat-input-wrapper {
             max-width: 800px;
             margin: 0 auto;
@@ -710,11 +717,25 @@
                 });
             }
 
-            // Gestion tactile globale optimisée
+            // Gestion tactile améliorée (Seuil de 0.5 cm réel calculé dynamiquement)
             let touchStartX = 0;
             let touchStartY = 0;
             let initialTransformX = 0;
             let isSwiping = false;
+
+            // Fonction pour convertir 0.5 cm en pixels selon l'écran (1 pouce = 2.54 cm -> 0.5cm = (96 ou densité) * 0.5 / 2.54 px)
+            // On approxime via une astuce DOM standard (créer un div de 1cm invisible ou utiliser un DPI standard de 160/96)
+            function getPixelThreshold() {
+                // Création d'un élément temporaire de 1cm pour mesurer la résolution réelle de l'écran tactile
+                const div = document.createElement('div');
+                div.style.width = '1cm';
+                div.style.position = 'absolute';
+                div.style.left = '-9999px';
+                document.body.appendChild(div);
+                const cmInPx = div.getBoundingClientRect().width;
+                document.body.removeChild(div);
+                return (cmInPx > 0 ? cmInPx : 38) * 0.5; // 0.5 cm en pixels réels
+            }
 
             document.addEventListener('touchstart', (e) => {
                 if (window.innerWidth >= 768) return;
@@ -754,17 +775,24 @@
                 overlay.style.opacity = percent;
             }, { passive: true });
 
-            document.addEventListener('touchend', () => {
+            document.addEventListener('touchend', (e) => {
                 if (!isSwiping || window.innerWidth >= 768) return;
                 isSwiping = false;
 
-                let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
-                let finalX = matchTransform ? parseFloat(matchTransform.groups ? matchTransform.groups[1] : matchTransform[1]) : -sidebarWidth;
+                let touchEndX = e.changedTouches[0].clientX;
+                let totalDiffX = touchEndX - touchStartX;
+                let threshold = getPixelThreshold();
 
-                if (finalX > -sidebarWidth / 2) {
-                    applySidebarState(true, true);
+                // Si le déplacement dépasse 0.5cm (dans un sens ou l'autre)
+                if (Math.abs(totalDiffX) >= threshold) {
+                    if (totalDiffX > 0) {
+                        applySidebarState(true, true); // Glissé vers la droite -> Ouvrir
+                    } else {
+                        applySidebarState(false, true); // Glissé vers la gauche -> Fermer
+                    }
                 } else {
-                    applySidebarState(false, true);
+                    // Si le mouvement est inférieur à 0.5cm, on remet l'état initial sans secousse
+                    applySidebarState(isSidebarOpen, true);
                 }
             }, { passive: true });
 
