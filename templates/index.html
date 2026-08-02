@@ -173,16 +173,12 @@
             width: 100%;
         }
 
-        /* Le bouton toggle n'apparaît que quand la barre latérale est fermée */
+        /* Le bouton toggle est toujours visible */
         .top-bar .toggle-sidebar-btn {
-            display: none;
-        }
-
-        .main-wrapper.sidebar-closed .top-bar .toggle-sidebar-btn {
             display: flex;
         }
 
-        /* BOUTON TOGGLE CUSTOM (Carré, fond rond, lignes intérieures) */
+        /* BOUTON TOGGLE CUSTOM (Cercle contenant le carré) */
         .toggle-sidebar-btn {
             background: none;
             border: none;
@@ -193,33 +189,57 @@
             justify-content: center;
         }
 
-        .custom-icon-box {
+        .custom-icon-circle {
             width: 38px;
             height: 38px;
             border-radius: 50%;
             background-color: var(--bg-input);
             border: 1px solid var(--border-color);
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            gap: 4px;
+            justify-content: center;
             transition: background 0.2s, border-color 0.2s;
         }
 
-        .custom-icon-box:hover {
+        .custom-icon-circle:hover {
             background-color: var(--bg-hover);
             border-color: var(--gold-primary);
         }
 
-        .custom-icon-bar {
-            width: 16px;
-            height: 2px;
-            background-color: var(--text-main);
-            border-radius: 2px;
+        /* Carré du logo */
+        .custom-icon-square {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--gold-primary);
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s;
         }
 
-        /* Section utilisateur fixe à droite peu importe l'état de la barre */
+        /* Partie gauche (2/5 = 40%) représentant la barre latérale */
+        .custom-icon-sidebar-part {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 40%;
+            height: 100%;
+            transition: background-color 0.2s;
+        }
+
+        /* ÉTATS :
+           - Bar fermée (.sidebar-closed sur .main-wrapper) : la partie gauche est jaune comme les contours.
+           - Bar ouverte (pas de .sidebar-closed) : la partie gauche est de la même couleur que le rond (--bg-input).
+        */
+        .main-wrapper.sidebar-closed .custom-icon-sidebar-part {
+            background-color: var(--gold-primary);
+        }
+
+        .main-wrapper:not(.sidebar-closed) .custom-icon-sidebar-part {
+            background-color: var(--bg-input);
+        }
+
+        /* Section utilisateur fixe à droite */
         .auth-section {
             display: flex;
             align-items: center;
@@ -558,12 +578,12 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3 class="sidebar-title">Buisness AI</h3>
-            <!-- Bouton pour fermer la barre, positionné à droite dans l'en-tête de la sidebar -->
+            <!-- Bouton pour fermer la barre -->
             <button class="toggle-sidebar-btn" id="toggle-sidebar-sidebar" title="Fermer le menu">
-                <div class="custom-icon-box">
-                    <div class="custom-icon-bar"></div>
-                    <div class="custom-icon-bar"></div>
-                    <div class="custom-icon-bar"></div>
+                <div class="custom-icon-circle">
+                    <div class="custom-icon-square">
+                        <div class="custom-icon-sidebar-part"></div>
+                    </div>
                 </div>
             </button>
         </div>
@@ -574,12 +594,12 @@
     <!-- WRAPPER PRINCIPAL -->
     <div class="main-wrapper sidebar-closed" id="main-wrapper">
         <header class="top-bar">
-            <!-- Bouton pour ouvrir la barre (n'apparaît que quand la barre est fermée) -->
+            <!-- Bouton pour ouvrir la barre -->
             <button class="toggle-sidebar-btn" id="toggle-sidebar-pc" title="Ouvrir la barre latérale">
-                <div class="custom-icon-box">
-                    <div class="custom-icon-bar"></div>
-                    <div class="custom-icon-bar"></div>
-                    <div class="custom-icon-bar"></div>
+                <div class="custom-icon-circle">
+                    <div class="custom-icon-square">
+                        <div class="custom-icon-sidebar-part"></div>
+                    </div>
                 </div>
             </button>
             <div class="auth-section">
