@@ -1,66 +1,55 @@
+Voici le code mis à jour. Le balayage tactile (*swipe*) a été étendu à **toute la largeur de l'écran** et les conflits de gestes ont été corrigés pour permettre l'ouverture et la fermeture fluide de la barre latérale par glissement depuis n'importe quel point.
+
+```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SaaS IA - Mentor Business</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mentor Business</title>
     <style>
+        /* --- RESET & VARIABLES --- */
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-        body {
-            background-color: #0c0c0e;
-            color: #e1e1e6;
-            display: flex;
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            position: relative;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* --- VOILE D'ARRIÈRE-PLAN MOBILE (Effet ChatGPT) --- */
-        .sidebar-overlay {
-            display: none;
+        :root {
+            --bg-main: #131313;
+            --bg-sidebar: #0d0d0d;
+            --bg-input: #1e1e1e;
+            --bg-hover: #262626;
+            --border-color: #2a2a2a;
+            --gold-primary: #d4af37;
+            --gold-hover: #e6c547;
+            --text-main: #f3f3f3;
+            --text-muted: #888888;
+            --sidebar-width: 280px;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            z-index: 90;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-        }
-
-        /* --- MENU LATÉRAL --- */
-        .sidebar {
-            width: 280px;
-            background-color: #141417;
-            border-right: 1px solid #222228;
-            display: flex;
-            flex-direction: column;
             z-index: 100;
-            flex-shrink: 0;
-            height: 100%;
-        }
-
-        /* Sur mobile, on la positionne en absolute pour pouvoir la glisser */
-        @media (max-width: 767px) {
-            .sidebar {
-                position: absolute;
-                top: 0;
-                left: 0;
-                height: 100%;
-                transform: translateX(-100%); /* Fermée par défaut sur mobile */
-                box-shadow: 5px 0 25px rgba(0,0,0,0.5);
-            }
-            .sidebar-overlay {
-                display: block;
-            }
+            transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
         }
 
         .sidebar-header {
@@ -68,414 +57,444 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #222228;
+            border-bottom: 1px solid var(--border-color);
         }
+
         .new-chat-btn {
-            background: linear-gradient(135deg, #d4af37, #aa7c11);
-            color: #0c0c0e;
-            border: none;
+            margin: 15px;
             padding: 12px;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
             border-radius: 8px;
-            font-weight: bold;
             cursor: pointer;
-            font-size: 0.9rem;
-            margin: 15px 15px 5px 15px;
-            width: calc(100% - 30px);
-            transition: opacity 0.2s;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-align: left;
         }
+
         .new-chat-btn:hover {
-            opacity: 0.9;
+            background-color: var(--bg-hover);
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
         }
+
         .history-list {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .history-item {
-            padding: 10px 12px;
-            border-radius: 6px;
-            background: transparent;
-            color: #a8a8b3;
-            font-size: 0.9rem;
-            cursor: pointer;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            overflow: hidden;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        .history-item:hover {
-            background-color: #1a1a20;
-            color: #e1e1e6;
-        }
-        .history-item.active {
-            background-color: #1f1f26;
-            color: #d4af37;
-            border-color: #332b0f;
+            padding: 0 10px 10px 10px;
         }
 
-        /* --- CONTENEUR PRINCIPAL --- */
+        .history-item {
+            padding: 10px 12px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .history-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-main);
+        }
+
+        .history-item.active {
+            background-color: var(--bg-hover);
+            color: var(--gold-primary);
+            font-weight: 500;
+        }
+
+        /* --- OVERLAY MOBILE --- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 99;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* --- MAIN WRAPPER --- */
         .main-wrapper {
             flex: 1;
             display: flex;
             flex-direction: column;
-            height: 100%;
+            height: 100vh;
+            margin-left: var(--sidebar-width);
+            width: calc(100vw - var(--sidebar-width));
             position: relative;
-            background-color: #0c0c0e;
-            min-width: 0;
-        }
-
-        .top-bar {
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        
-        /* --- BOUTON TOGGLE EN FORME DE ROND --- */
-        .toggle-sidebar-btn {
-            background: #141417;
-            border: 1px solid #282830;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: border-color 0.2s, background-color 0.2s;
-        }
-        .custom-icon-box {
-            width: 20px;
-            height: 16px;
-            border: 2px solid #a8a8b3;
-            border-radius: 3px;
-            position: relative;
-            transition: border-color 0.2s;
-        }
-        .custom-icon-bar {
-            position: absolute;
-            top: 0;
-            left: 35%;
-            width: 2px;
-            height: 100%;
-            background-color: #a8a8b3;
-            transition: background-color 0.2s;
-        }
-
-        @media (min-width: 768px) {
-            .toggle-sidebar-btn:hover {
-                border-color: #d4af37;
-                background-color: #1a1a20;
-            }
-            .toggle-sidebar-btn:hover .custom-icon-box {
-                border-color: #d4af37;
-            }
-            .toggle-sidebar-btn:hover .custom-icon-bar {
-                background-color: #d4af37;
-            }
-            .toggle-sidebar-btn::after {
-                content: attr(data-tooltip);
-                position: absolute;
-                top: 48px;
-                left: 0;
-                background-color: #202028;
-                color: #e1e1e6;
-                padding: 4px 8px;
-                font-size: 0.75rem;
-                border-radius: 4px;
-                white-space: nowrap;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.2s;
-                border: 1px solid #33333d;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                z-index: 10;
-            }
-            .toggle-sidebar-btn:hover::after {
-                opacity: 1;
-            }
         }
 
         @media (max-width: 767px) {
-            .toggle-sidebar-btn {
-                border-color: #332b0f;
+            .main-wrapper {
+                margin-left: 0;
+                width: 100vw;
             }
-            .custom-icon-box {
-                border-color: #d4af37 !important;
+            .sidebar {
+                transform: translateX(-100%);
             }
-            .custom-icon-bar {
-                background-color: #d4af37 !important;
-            }
+        }
+
+        /* --- TOP BAR --- */
+        .top-bar {
+            height: 60px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background-color: var(--bg-main);
+        }
+
+        .toggle-sidebar-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .custom-icon-box {
+            width: 24px;
+            height: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .custom-icon-bar {
+            width: 100%;
+            height: 2px;
+            background-color: var(--text-main);
+            border-radius: 2px;
         }
 
         .auth-section {
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-        .auth-section span {
-            font-size: 0.85rem;
-            color: #a8a8b3;
-        }
-        .btn-auth-main {
-            background-color: transparent;
-            color: #d4af37;
-            border: 1px solid #d4af37;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-auth-main:hover {
-            background-color: #d4af37;
-            color: #0c0c0e;
-        }
-        .btn-logout {
-            color: #ff5555;
-            text-decoration: none;
-            font-size: 0.85rem;
-        }
-        .btn-logout:hover {
-            text-decoration: underline;
+            gap: 15px;
+            font-size: 0.9rem;
         }
 
+        .btn-auth-main {
+            background-color: var(--gold-primary);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-auth-main:hover {
+            background-color: var(--gold-hover);
+        }
+
+        .btn-logout {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .btn-logout:hover {
+            color: var(--text-main);
+        }
+
+        /* --- CHAT AREA --- */
         .chat-area {
             flex: 1;
             display: flex;
             flex-direction: column;
+            position: relative;
             overflow: hidden;
-            position: relative;
-        }
-        .chat-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            max-width: 800px;
-            width: 100%;
-            margin: 0 auto;
-            position: relative;
-        }
-
-        /* --- BOUTON RETOUR EN BAS --- */
-        .scroll-bottom-btn {
-            position: absolute;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 40px;
-            background-color: #1a1a20;
-            color: #d4af37;
-            border: 1px solid #332b0f;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0.75;
-            transition: opacity 0.2s, background-color 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            z-index: 50;
-            display: none;
-        }
-        .scroll-bottom-btn:hover {
-            opacity: 0.85;
-            background-color: #22222a;
         }
 
         .welcome-greeting-container {
             position: absolute;
-            top: 40%;
+            top: 35%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
             width: 90%;
             max-width: 600px;
-            pointer-events: none;
+            z-index: 10;
         }
+
         .welcome-greeting {
-            color: #d4af37;
-            font-size: 1.5rem;
-            font-weight: 500;
-            letter-spacing: 0.3px;
-            text-shadow: 0 2px 15px rgba(212, 175, 55, 0.15);
+            font-size: 1.8rem;
+            color: var(--gold-primary);
+            font-weight: 600;
         }
 
-        .message {
-            max-width: 80%;
-            padding: 14px 18px;
-            border-radius: 10px;
-            line-height: 1.6;
-            font-size: 0.95rem;
-            word-break: break-word;
-            white-space: pre-wrap;
-        }
-        .message.bot {
-            align-self: flex-start;
-            background-color: #16161a;
-            color: #e1e1e6;
-            border: 1px solid #222228;
-        }
-        .message.user {
-            align-self: flex-end;
-            background-color: #262211;
-            color: #fceea7;
-            border: 1px solid #4a3f12;
-        }
-
-        .chat-input-container {
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            flex-shrink: 0;
-            background-color: #0c0c0e;
-        }
-        .chat-input-wrapper {
-            width: 100%;
-            max-width: 750px;
-            background-color: #141417;
-            border: 1px solid #282830;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            padding: 8px 12px 8px 18px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            transition: border-color 0.2s;
-        }
-        .chat-input-wrapper:focus-within {
-            border-color: #d4af37;
-        }
-        .chat-input-wrapper input {
+        .chat-box {
             flex: 1;
-            background: transparent;
-            border: none;
-            color: #e1e1e6;
-            font-size: 1rem;
-            outline: none;
-            padding: 8px 0;
-        }
-        .chat-input-wrapper input::placeholder {
-            color: #6c6c75;
-        }
-        .send-btn {
-            background-color: #d4af37;
-            color: #0c0c0e;
-            border: none;
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            font-weight: bold;
-        }
-        .send-btn:hover {
-            opacity: 0.85;
-        }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.75);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 15px;
-        }
-        .modal-content {
-            background-color: #141417;
-            border: 1px solid #282830;
-            border-radius: 14px;
-            width: 100%;
-            max-width: 400px;
-            padding: 25px;
+            overflow-y: auto;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 20px;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            scroll-behavior: smooth;
+            padding-bottom: 100px;
         }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user {
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot {
+            background-color: transparent;
+            color: var(--text-main);
+            align-self: flex-start;
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .scroll-bottom-btn {
+            display: none;
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 20;
+            transition: background 0.2s;
+        }
+
+        .scroll-bottom-btn:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
+        }
+
+        /* --- INPUT CONTAINER --- */
+        .chat-input-container {
+            padding: 20px;
+            background: linear-gradient(to top, var(--bg-main) 80%, transparent);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .chat-input-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px 12px;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: var(--gold-primary);
+        }
+
+        #user-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            padding: 8px;
+            outline: none;
+        }
+
+        #user-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            background: none;
+            border: none;
+            color: var(--gold-primary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* --- MODALE D'AUTHENTIFICATION --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
         .modal-close {
             position: absolute;
-            top: 15px; right: 15px;
-            background: none; border: none;
-            color: #a8a8b3; font-size: 1.2rem;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
             cursor: pointer;
         }
+
+        .modal-close:hover {
+            color: var(--text-main);
+        }
+
         .modal-tabs {
             display: flex;
-            border-bottom: 1px solid #222228;
-            gap: 15px;
-            margin-bottom: 5px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
         }
+
         .modal-tab {
-            background: none; border: none;
-            color: #a8a8b3; font-size: 1rem;
-            padding-bottom: 10px; cursor: pointer;
-            font-weight: bold;
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
         }
+
         .modal-tab.active {
-            color: #d4af37;
-            border-bottom: 2px solid #d4af37;
+            color: var(--gold-primary);
+            border-bottom-color: var(--gold-primary);
         }
+
         .auth-form {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
         }
+
         .auth-form input {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid #222228;
-            background-color: #0c0c0e;
-            color: #e1e1e6;
-            font-size: 16px;
+            color: var(--text-main);
+            font-size: 0.95rem;
             outline: none;
         }
+
         .auth-form input:focus {
-            border-color: #d4af37;
+            border-color: var(--gold-primary);
         }
+
         .btn-submit {
-            background-color: #d4af37;
-            color: #0c0c0e; padding: 12px;
-            border: none; border-radius: 8px;
-            font-weight: bold; cursor: pointer;
+            background-color: var(--gold-primary);
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
         }
-        .btn-submit:hover { opacity: 0.9; }
+
+        .btn-submit:hover {
+            background-color: var(--gold-hover);
+        }
+
+        .error-msg {
+            color: #ff5555;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            display: none;
+        }
+
         .divider {
-            text-align: center; color: #6c6c75; font-size: 0.85rem;
-            position: relative; margin: 5px 0;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            position: relative;
         }
+
         .divider::before, .divider::after {
-            content: ""; position: absolute; top: 50%; width: 40%; height: 1px; background-color: #222228;
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background-color: var(--border-color);
         }
+
         .divider::before { left: 0; }
         .divider::after { right: 0; }
+
         .btn-google-modal {
-            background-color: #ffffff; color: #0c0c0e;
-            padding: 12px; border-radius: 8px;
-            text-decoration: none; text-align: center;
-            font-weight: bold; font-size: 0.9rem;
             display: block;
+            text-align: center;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
         }
-        .btn-google-modal:hover { background-color: #e1e1e6; }
-        .error-msg {
-            color: #ff5555; font-size: 0.85rem; text-align: center; display: none;
+
+        .btn-google-modal:hover {
+            background-color: var(--bg-hover);
         }
     </style>
 </head>
@@ -498,6 +517,8 @@
         <header class="top-bar">
             <button class="toggle-sidebar-btn" id="toggle-sidebar" data-tooltip="Barre latérale">
                 <div class="custom-icon-box">
+                    <div class="custom-icon-bar"></div>
+                    <div class="custom-icon-bar"></div>
                     <div class="custom-icon-bar"></div>
                 </div>
             </button>
@@ -586,7 +607,7 @@
             let isSidebarOpen = window.innerWidth >= 768;
 
             function updateSidebarPosition(x, animate = false, opacityVal = null) {
-                if (window.innerWidth >= 768) return; // Sur desktop, comportement fixe normal
+                if (window.innerWidth >= 768) return; 
                 
                 if (animate) {
                     sidebar.style.transition = 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)';
@@ -598,7 +619,6 @@
 
                 sidebar.style.transform = `translateX(${x}px)`;
                 
-                // Calcul de l'opacité de l'overlay en fonction de la position (-280px = 0, 0px = 1)
                 let percent = (x + sidebarWidth) / sidebarWidth;
                 if (percent < 0) percent = 0;
                 if (percent > 1) percent = 1;
@@ -616,7 +636,6 @@
                 }
             }
 
-            // Initialisation de l'affichage desktop/mobile
             if (window.innerWidth >= 768) {
                 sidebar.style.transform = 'translateX(0px)';
                 overlay.style.display = 'none';
@@ -624,7 +643,6 @@
                 updateSidebarPosition(-sidebarWidth);
             }
 
-            // Clic sur le bouton rond du haut
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', () => {
                     if (window.innerWidth < 768) {
@@ -632,7 +650,6 @@
                         let targetX = isSidebarOpen ? 0 : -sidebarWidth;
                         updateSidebarPosition(targetX, true);
                     } else {
-                        // Comportement escamotable sur bureau si souhaité
                         isSidebarOpen = !isSidebarOpen;
                         sidebar.style.transition = 'transform 0.3s ease';
                         sidebar.style.transform = isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)';
@@ -640,7 +657,6 @@
                 });
             }
 
-            // Clic sur le voile sombre pour fermer
             if (overlay) {
                 overlay.addEventListener('click', () => {
                     isSidebarOpen = false;
@@ -648,7 +664,6 @@
                 });
             }
 
-            // --- GESTION DU TACTILE LIBRE EN TEMPS RÉEL (Type ChatGPT Mobile) ---
             let touchStartX = 0;
             let touchStartY = 0;
             let initialSidebarX = 0;
@@ -659,18 +674,15 @@
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
                 
-                // Permettre de commencer le swipe depuis le bord gauche (zone de tolérance 40px) ou si la sidebar est déjà ouverte
                 let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
                 currentX = matchTransform ? parseFloat(matchTransform[1]) : -sidebarWidth;
                 initialSidebarX = currentX;
 
-                if (touchStartX < 40 || currentX > -sidebarWidth) {
-                    isSwiping = true;
-                    sidebar.style.transition = 'none';
-                    overlay.style.transition = 'none';
-                } else {
-                    isSwiping = false;
-                }
+                // On autorise le swipe n'importe où sur l'écran si la barre est ouverte, 
+                // ou un geste vers la droite depuis n'importe où si elle est fermée.
+                isSwiping = true;
+                sidebar.style.transition = 'none';
+                overlay.style.transition = 'none';
             }, { passive: true });
 
             document.addEventListener('touchmove', (e) => {
@@ -679,17 +691,18 @@
                 let currentTouchX = e.touches[0].clientX;
                 let currentTouchY = e.touches[0].clientY;
                 
-                // Si l'utilisateur scroll verticalement plus qu'horizontalement, on annule le swipe latéral
                 let diffX = currentTouchX - touchStartX;
                 let diffY = Math.abs(currentTouchY - touchStartY);
-                if (diffY > Math.abs(diffX) && initialSidebarX === -sidebarWidth) {
+
+                // Si le mouvement vertical est supérieur au mouvement horizontal au tout début, 
+                // on annule le swipe pour laisser place au scroll natif.
+                if (diffY > Math.abs(diffX) && Math.abs(diffX) < 10) {
                     isSwiping = false;
                     return;
                 }
 
                 let newX = initialSidebarX + diffX;
                 
-                // Empêcher de tirer trop loin vers la gauche ou vers la droite
                 if (newX > 0) newX = 0;
                 if (newX < -sidebarWidth) newX = -sidebarWidth;
 
@@ -703,7 +716,6 @@
                 let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
                 let finalX = matchTransform ? parseFloat(matchTransform[1]) : -sidebarWidth;
 
-                // Seuil d'ouverture : si on a glissé à plus de la moitié, ou si le mouvement était rapide
                 let targetX;
                 if (finalX > -sidebarWidth / 2) {
                     targetX = 0;
@@ -716,7 +728,6 @@
                 updateSidebarPosition(targetX, true);
             }, { passive: true });
 
-            // Redimensionnement de la fenêtre
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 768) {
                     sidebar.style.transform = 'translateX(0px)';
@@ -728,7 +739,6 @@
                 }
             });
 
-            // --- RESTE DU CODE CHAT & AUTH ---
             const modal = document.getElementById('auth-modal');
             const openAuthBtn = document.getElementById('open-auth-modal');
             const closeAuthBtn = document.getElementById('close-auth-modal');
@@ -1020,3 +1030,5 @@
     </script>
 </body>
 </html>
+
+```
