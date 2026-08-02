@@ -68,8 +68,6 @@
             color: var(--gold-primary);
             font-size: 1rem;
             font-weight: 600;
-            margin-left: 0;
-            transition: margin-left 0.3s ease;
         }
 
         .new-chat-btn {
@@ -179,6 +177,15 @@
             padding-left: 15px;
         }
 
+        /* Gestion de l'affichage du bouton toggle dans la top-bar (visible uniquement si sidebar fermée) */
+        .top-bar .toggle-sidebar-btn {
+            display: none;
+        }
+
+        .main-wrapper.sidebar-closed .top-bar .toggle-sidebar-btn {
+            display: flex;
+        }
+
         /* BOUTON TOGGLE CUSTOM (Carré, fond rond, lignes intérieures) */
         .toggle-sidebar-btn {
             background: none;
@@ -214,13 +221,6 @@
             height: 2px;
             background-color: var(--text-main);
             border-radius: 2px;
-        }
-
-        /* Bouton toggle mobile intégré dans l'en-tête de la sidebar */
-        .sidebar-header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
         .auth-section {
@@ -354,7 +354,6 @@
             z-index: 30;
         }
 
-        /* Ajustement hauteur/remontée sur mobile pour éviter les barres du navigateur */
         @media (max-width: 767px) {
             .chat-input-container {
                 bottom: 25px;
@@ -560,26 +559,25 @@
     <!-- MENU LATÉRAL -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-header-left">
-                <!-- Bouton toggle intégré à gauche dans la sidebar ouverte -->
-                <button class="toggle-sidebar-btn" id="toggle-sidebar-sidebar" title="Menu">
-                    <div class="custom-icon-box">
-                        <div class="custom-icon-bar"></div>
-                        <div class="custom-icon-bar"></div>
-                        <div class="custom-icon-bar"></div>
-                    </div>
-                </button>
-                <h3 class="sidebar-title">Buisness AI</h3>
-            </div>
+            <h3 class="sidebar-title">Business AI</h3>
+            <!-- Bouton pour fermer la barre, positionné à droite dans l'en-tête de la sidebar -->
+            <button class="toggle-sidebar-btn" id="toggle-sidebar-sidebar" title="Fermer le menu">
+                <div class="custom-icon-box">
+                    <div class="custom-icon-bar"></div>
+                    <div class="custom-icon-bar"></div>
+                    <div class="custom-icon-bar"></div>
+                </div>
+            </button>
         </div>
         <button class="new-chat-btn" id="new-chat-btn">+ Nouveau chat</button>
         <div class="history-list" id="history-list"></div>
     </aside>
 
     <!-- WRAPPER PRINCIPAL -->
-    <div class="main-wrapper" id="main-wrapper">
+    <div class="main-wrapper sidebar-closed" id="main-wrapper">
         <header class="top-bar">
-            <button class="toggle-sidebar-btn" id="toggle-sidebar-pc" title="Barre latérale">
+            <!-- Bouton pour ouvrir la barre (n'apparaît que quand la barre est fermée) -->
+            <button class="toggle-sidebar-btn" id="toggle-sidebar-pc" title="Ouvrir la barre latérale">
                 <div class="custom-icon-box">
                     <div class="custom-icon-bar"></div>
                     <div class="custom-icon-bar"></div>
@@ -669,7 +667,7 @@
             const mainWrapper = document.getElementById('main-wrapper');
             
             const sidebarWidth = 280;
-            let isSidebarOpen = window.innerWidth >= 768;
+            let isSidebarOpen = false; // Par défaut fermée au chargement
 
             function applySidebarState(open, animate = true) {
                 isSidebarOpen = open;
@@ -717,16 +715,13 @@
                 });
             }
 
-            // Gestion tactile améliorée (Seuil de 0.5 cm réel calculé dynamiquement)
+            // Gestion tactile (seuil de 0.5 cm réel)
             let touchStartX = 0;
             let touchStartY = 0;
             let initialTransformX = 0;
             let isSwiping = false;
 
-            // Fonction pour convertir 0.5 cm en pixels selon l'écran (1 pouce = 2.54 cm -> 0.5cm = (96 ou densité) * 0.5 / 2.54 px)
-            // On approxime via une astuce DOM standard (créer un div de 1cm invisible ou utiliser un DPI standard de 160/96)
             function getPixelThreshold() {
-                // Création d'un élément temporaire de 1cm pour mesurer la résolution réelle de l'écran tactile
                 const div = document.createElement('div');
                 div.style.width = '1cm';
                 div.style.position = 'absolute';
@@ -734,7 +729,7 @@
                 document.body.appendChild(div);
                 const cmInPx = div.getBoundingClientRect().width;
                 document.body.removeChild(div);
-                return (cmInPx > 0 ? cmInPx : 38) * 0.5; // 0.5 cm en pixels réels
+                return (cmInPx > 0 ? cmInPx : 38) * 0.5;
             }
 
             document.addEventListener('touchstart', (e) => {
@@ -783,15 +778,13 @@
                 let totalDiffX = touchEndX - touchStartX;
                 let threshold = getPixelThreshold();
 
-                // Si le déplacement dépasse 0.5cm (dans un sens ou l'autre)
                 if (Math.abs(totalDiffX) >= threshold) {
                     if (totalDiffX > 0) {
-                        applySidebarState(true, true); // Glissé vers la droite -> Ouvrir
+                        applySidebarState(true, true);
                     } else {
-                        applySidebarState(false, true); // Glissé vers la gauche -> Fermer
+                        applySidebarState(false, true);
                     }
                 } else {
-                    // Si le mouvement est inférieur à 0.5cm, on remet l'état initial sans secousse
                     applySidebarState(isSidebarOpen, true);
                 }
             }, { passive: true });
