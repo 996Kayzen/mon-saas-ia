@@ -26,12 +26,17 @@
             --sidebar-width: 280px;
         }
 
-        body {
+        html, body {
+            width: 100vw;
+            height: 100vh;
             background-color: var(--bg-main);
             color: var(--text-main);
-            height: 100vh;
-            display: flex;
             overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            position: relative;
         }
 
         /* --- SIDEBAR --- */
@@ -46,6 +51,7 @@
             top: 0;
             left: 0;
             z-index: 100;
+            transform: translateX(0);
             transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
         }
 
@@ -129,12 +135,18 @@
             margin-left: var(--sidebar-width);
             width: calc(100vw - var(--sidebar-width));
             position: relative;
+            transition: margin-left 0.3s ease, width 0.3s ease;
+        }
+
+        .main-wrapper.sidebar-closed {
+            margin-left: 0 !important;
+            width: 100vw !important;
         }
 
         @media (max-width: 767px) {
             .main-wrapper {
-                margin-left: 0;
-                width: 100vw;
+                margin-left: 0 !important;
+                width: 100vw !important;
             }
             .sidebar {
                 transform: translateX(-100%);
@@ -150,28 +162,64 @@
             justify-content: space-between;
             padding: 0 20px;
             background-color: var(--bg-main);
+            flex-shrink: 0;
+            transition: padding-left 0.3s ease;
         }
 
+        .main-wrapper.sidebar-closed .top-bar {
+            padding-left: 15px;
+        }
+
+        /* BOUTON TOGGLE CUSTOM (Carré, fond rond, lignes intérieures) */
         .toggle-sidebar-btn {
             background: none;
             border: none;
             cursor: pointer;
-            padding: 5px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .custom-icon-box {
-            width: 24px;
-            height: 20px;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .custom-icon-box:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--gold-primary);
         }
 
         .custom-icon-bar {
-            width: 100%;
+            width: 16px;
             height: 2px;
             background-color: var(--text-main);
             border-radius: 2px;
+        }
+
+        /* Bouton toggle flottant visible sur mobile même quand le menu est ouvert */
+        .mobile-floating-toggle {
+            display: none;
+            position: fixed;
+            top: 11px;
+            left: 15px;
+            z-index: 101;
+        }
+
+        @media (max-width: 767px) {
+            .mobile-floating-toggle {
+                display: flex;
+            }
         }
 
         .auth-section {
@@ -240,7 +288,7 @@
             flex-direction: column;
             gap: 20px;
             scroll-behavior: smooth;
-            padding-bottom: 100px;
+            padding-bottom: 120px;
         }
 
         .message {
@@ -302,6 +350,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
+            z-index: 30;
         }
 
         .chat-input-wrapper {
@@ -500,6 +549,15 @@
     <!-- VOILE SOMBRE ARRIÈRE-PLAN MOBILE -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
+    <!-- BOUTON FLOTTANT MOBILE (Visible en permanence même menu ouvert) -->
+    <button class="toggle-sidebar-btn mobile-floating-toggle" id="toggle-sidebar-mobile" title="Menu">
+        <div class="custom-icon-box">
+            <div class="custom-icon-bar"></div>
+            <div class="custom-icon-bar"></div>
+            <div class="custom-icon-bar"></div>
+        </div>
+    </button>
+
     <!-- MENU LATÉRAL -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -510,9 +568,9 @@
     </aside>
 
     <!-- WRAPPER PRINCIPAL -->
-    <div class="main-wrapper">
+    <div class="main-wrapper" id="main-wrapper">
         <header class="top-bar">
-            <button class="toggle-sidebar-btn" id="toggle-sidebar" data-tooltip="Barre latérale">
+            <button class="toggle-sidebar-btn" id="toggle-sidebar-pc" title="Barre latérale">
                 <div class="custom-icon-box">
                     <div class="custom-icon-bar"></div>
                     <div class="custom-icon-bar"></div>
@@ -597,73 +655,63 @@
 
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            const toggleBtn = document.getElementById('toggle-sidebar');
+            const togglePcBtn = document.getElementById('toggle-sidebar-pc');
+            const toggleMobileBtn = document.getElementById('toggle-sidebar-mobile');
+            const mainWrapper = document.getElementById('main-wrapper');
             
             const sidebarWidth = 280;
-            let currentX = window.innerWidth >= 768 ? 0 : -sidebarWidth;
             let isSidebarOpen = window.innerWidth >= 768;
 
-            function updateSidebarPosition(x, animate = false, opacityVal = null) {
-                if (window.innerWidth >= 768) return; 
-                
-                if (animate) {
-                    sidebar.style.transition = 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)';
-                    overlay.style.transition = 'opacity 0.3s ease';
-                } else {
-                    sidebar.style.transition = 'none';
-                    overlay.style.transition = 'none';
-                }
-
-                sidebar.style.transform = `translateX(${x}px)`;
-                
-                let percent = (x + sidebarWidth) / sidebarWidth;
-                if (percent < 0) percent = 0;
-                if (percent > 1) percent = 1;
-                
-                if (opacityVal !== null) {
-                    overlay.style.opacity = opacityVal;
-                } else {
-                    overlay.style.opacity = percent;
-                }
-
-                if (percent > 0) {
-                    overlay.style.display = 'block';
-                } else {
-                    overlay.style.display = 'none';
-                }
-            }
-
-            if (window.innerWidth >= 768) {
-                sidebar.style.transform = 'translateX(0px)';
-                overlay.style.display = 'none';
-            } else {
-                updateSidebarPosition(-sidebarWidth);
-            }
-
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', () => {
-                    if (window.innerWidth < 768) {
-                        isSidebarOpen = !isSidebarOpen;
-                        let targetX = isSidebarOpen ? 0 : -sidebarWidth;
-                        updateSidebarPosition(targetX, true);
+            function applySidebarState(open, animate = true) {
+                isSidebarOpen = open;
+                if (window.innerWidth >= 768) {
+                    sidebar.style.transition = animate ? 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
+                    sidebar.style.transform = open ? 'translateX(0)' : 'translateX(-100%)';
+                    
+                    if (open) {
+                        mainWrapper.classList.remove('sidebar-closed');
                     } else {
-                        isSidebarOpen = !isSidebarOpen;
-                        sidebar.style.transition = 'transform 0.3s ease';
-                        sidebar.style.transform = isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)';
+                        mainWrapper.classList.add('sidebar-closed');
                     }
-                });
+                    overlay.style.display = 'none';
+                } else {
+                    sidebar.style.transition = animate ? 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)' : 'none';
+                    overlay.style.transition = animate ? 'opacity 0.3s ease' : 'none';
+                    mainWrapper.classList.add('sidebar-closed');
+
+                    if (open) {
+                        sidebar.style.transform = 'translateX(0)';
+                        overlay.style.display = 'block';
+                        overlay.style.opacity = '1';
+                    } else {
+                        sidebar.style.transform = `translateX(-${sidebarWidth}px)`;
+                        overlay.style.opacity = '0';
+                        setTimeout(() => {
+                            if (!isSidebarOpen) overlay.style.display = 'none';
+                        }, 300);
+                    }
+                }
             }
+
+            applySidebarState(isSidebarOpen, false);
+
+            const toggleMenu = () => {
+                applySidebarState(!isSidebarOpen, true);
+            };
+
+            if (togglePcBtn) togglePcBtn.addEventListener('click', toggleMenu);
+            if (toggleMobileBtn) toggleMobileBtn.addEventListener('click', toggleMenu);
 
             if (overlay) {
                 overlay.addEventListener('click', () => {
-                    isSidebarOpen = false;
-                    updateSidebarPosition(-sidebarWidth, true, 0);
+                    applySidebarState(false, true);
                 });
             }
 
+            // Gestion tactile globale optimisée
             let touchStartX = 0;
             let touchStartY = 0;
-            let initialSidebarX = 0;
+            let initialTransformX = 0;
             let isSwiping = false;
 
             document.addEventListener('touchstart', (e) => {
@@ -672,11 +720,8 @@
                 touchStartY = e.touches[0].clientY;
                 
                 let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
-                currentX = matchTransform ? parseFloat(matchTransform[1]) : -sidebarWidth;
-                initialSidebarX = currentX;
+                initialTransformX = matchTransform ? parseFloat(matchTransform[1]) : (isSidebarOpen ? 0 : -sidebarWidth);
 
-                // On autorise le swipe n'importe où sur l'écran si la barre est ouverte, 
-                // ou un geste vers la droite depuis n'importe où si elle est fermée.
                 isSwiping = true;
                 sidebar.style.transition = 'none';
                 overlay.style.transition = 'none';
@@ -691,51 +736,45 @@
                 let diffX = currentTouchX - touchStartX;
                 let diffY = Math.abs(currentTouchY - touchStartY);
 
-                // Si le mouvement vertical est supérieur au mouvement horizontal au tout début, 
-                // on annule le swipe pour laisser place au scroll natif.
                 if (diffY > Math.abs(diffX) && Math.abs(diffX) < 10) {
                     isSwiping = false;
                     return;
                 }
 
-                let newX = initialSidebarX + diffX;
-                
+                let newX = initialTransformX + diffX;
                 if (newX > 0) newX = 0;
                 if (newX < -sidebarWidth) newX = -sidebarWidth;
 
-                updateSidebarPosition(newX, false);
+                sidebar.style.transform = `translateX(${newX}px)`;
+                
+                let percent = (newX + sidebarWidth) / sidebarWidth;
+                overlay.style.display = 'block';
+                overlay.style.opacity = percent;
             }, { passive: true });
 
-            document.addEventListener('touchend', (e) => {
+            document.addEventListener('touchend', () => {
                 if (!isSwiping || window.innerWidth >= 768) return;
                 isSwiping = false;
 
                 let matchTransform = sidebar.style.transform.match(/translateX\(([-\d.]+)px\)/);
-                let finalX = matchTransform ? parseFloat(matchTransform[1]) : -sidebarWidth;
+                let finalX = matchTransform ? parseFloat(matchTransform.groups ? matchTransform.groups[1] : matchTransform[1]) : -sidebarWidth;
 
-                let targetX;
                 if (finalX > -sidebarWidth / 2) {
-                    targetX = 0;
-                    isSidebarOpen = true;
+                    applySidebarState(true, true);
                 } else {
-                    targetX = -sidebarWidth;
-                    isSidebarOpen = false;
+                    applySidebarState(false, true);
                 }
-
-                updateSidebarPosition(targetX, true);
             }, { passive: true });
 
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 768) {
-                    sidebar.style.transform = 'translateX(0px)';
-                    overlay.style.display = 'none';
+                    applySidebarState(true, false);
                 } else {
-                    if (!isSidebarOpen) {
-                        updateSidebarPosition(-sidebarWidth);
-                    }
+                    applySidebarState(false, false);
                 }
             });
 
+            // Gestion Authentification Modale
             const modal = document.getElementById('auth-modal');
             const openAuthBtn = document.getElementById('open-auth-modal');
             const closeAuthBtn = document.getElementById('close-auth-modal');
@@ -811,6 +850,7 @@
                 });
             }
 
+            // Logique Chat & Historique
             const chatBox = document.getElementById('chat-box');
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
@@ -854,13 +894,7 @@
             function cleanTextContent(text) {
                 if (!text) return "";
                 let lines = text.split('\n');
-                let cleanedLines = lines.filter(line => {
-                    let trimmed = line.trim();
-                    if (/^-+$/.test(trimmed)) {
-                        return false;
-                    }
-                    return true;
-                });
+                let cleanedLines = lines.filter(line => !/^-+$/.test(line.trim()));
                 return cleanedLines.join('\n').trim();
             }
 
@@ -875,7 +909,7 @@
                             const div = document.createElement('div');
                             div.className = 'history-item' + (c.id === currentConversationId ? ' active' : '');
                             div.textContent = c.title;
-                            div.addEventListener('click', () => switchToConversation(c.id, c.title));
+                            div.addEventListener('click', () => switchToConversation(c.id));
                             historyList.appendChild(div);
                         });
                     } catch (e) { console.error(e); }
@@ -891,14 +925,12 @@
                 }
             }
 
-            async function switchToConversation(id, title) {
+            async function switchToConversation(id) {
                 currentConversationId = id;
                 conversationHistory = [];
                 if (chatBox) {
-                    const messages = chatBox.querySelectorAll('.message');
-                    messages.forEach(m => m.remove());
+                    chatBox.querySelectorAll('.message').forEach(m => m.remove());
                 }
-                
                 try {
                     const res = await fetch(`/api/conversations/${id}/messages`);
                     const messages = await res.json();
@@ -907,7 +939,6 @@
                         conversationHistory.push({ role: m.role, content: m.content });
                     });
                 } catch (e) { console.error(e); }
-                
                 updateWelcomeVisibility();
                 loadConversationsList();
             }
@@ -915,8 +946,7 @@
             function switchToGuestConversation(id) {
                 currentConversationId = id;
                 if (chatBox) {
-                    const messages = chatBox.querySelectorAll('.message');
-                    messages.forEach(m => m.remove());
+                    chatBox.querySelectorAll('.message').forEach(m => m.remove());
                 }
                 conversationHistory = localGuestConversations[id].messages || [];
                 conversationHistory.forEach(m => {
@@ -931,8 +961,7 @@
                     currentConversationId = 'conv_' + Date.now();
                     conversationHistory = [];
                     if (chatBox) {
-                        const messages = chatBox.querySelectorAll('.message');
-                        messages.forEach(m => m.remove());
+                        chatBox.querySelectorAll('.message').forEach(m => m.remove());
                     }
                     updateWelcomeVisibility();
                     loadConversationsList();
@@ -949,7 +978,6 @@
                 if (scrollToElement) {
                     messageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                
                 updateWelcomeVisibility();
                 return messageDiv;
             }
@@ -1007,7 +1035,6 @@
                 } catch (error) {
                     loadingMessage.textContent = "Impossible de contacter le serveur.";
                 }
-
                 userInput.focus();
             }
 
@@ -1027,5 +1054,3 @@
     </script>
 </body>
 </html>
-
-```
