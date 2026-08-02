@@ -173,8 +173,18 @@
             width: 100%;
         }
 
-        /* Le bouton toggle est toujours visible */
+        /* Gestion de l'affichage des boutons toggle selon l'état de la barre */
+        /* Par défaut (barre ouverte), le bouton de la topbar est caché */
         .top-bar .toggle-sidebar-btn {
+            display: none;
+        }
+
+        /* Quand la barre est fermée, on affiche le bouton dans la topbar */
+        .main-wrapper.sidebar-closed .top-bar .toggle-sidebar-btn {
+            display: flex;
+        }
+
+        .sidebar-header .toggle-sidebar-btn {
             display: flex;
         }
 
@@ -578,7 +588,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3 class="sidebar-title">Buisness AI</h3>
-            <!-- Bouton pour fermer la barre -->
+            <!-- Bouton pour fermer la barre (apparaît à droite de la barre latérale) -->
             <button class="toggle-sidebar-btn" id="toggle-sidebar-sidebar" title="Fermer le menu">
                 <div class="custom-icon-circle">
                     <div class="custom-icon-square">
@@ -594,7 +604,7 @@
     <!-- WRAPPER PRINCIPAL -->
     <div class="main-wrapper sidebar-closed" id="main-wrapper">
         <header class="top-bar">
-            <!-- Bouton pour ouvrir la barre -->
+            <!-- Bouton pour ouvrir la barre (apparaît sur l'écran principal quand la barre est fermée) -->
             <button class="toggle-sidebar-btn" id="toggle-sidebar-pc" title="Ouvrir la barre latérale">
                 <div class="custom-icon-circle">
                     <div class="custom-icon-square">
@@ -733,7 +743,6 @@
                 });
             }
 
-            // Gestion tactile (seuil de 0.5 cm réel)
             let touchStartX = 0;
             let touchStartY = 0;
             let initialTransformX = 0;
@@ -815,7 +824,6 @@
                 }
             });
 
-            // Gestion Authentification Modale
             const modal = document.getElementById('auth-modal');
             const openAuthBtn = document.getElementById('open-auth-modal');
             const closeAuthBtn = document.getElementById('close-auth-modal');
@@ -891,7 +899,6 @@
                 });
             }
 
-            // Logique Chat & Historique
             const chatBox = document.getElementById('chat-box');
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
