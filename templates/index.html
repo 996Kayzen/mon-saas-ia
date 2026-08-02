@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mentor Business</title>
+    <title>Mentor Buisness</title>
     <style>
         /* --- RESET & VARIABLES --- */
         * {
@@ -170,14 +170,10 @@
             padding: 0 20px;
             background-color: var(--bg-main);
             flex-shrink: 0;
-            transition: padding-left 0.3s ease;
+            width: 100%;
         }
 
-        .main-wrapper.sidebar-closed .top-bar {
-            padding-left: 15px;
-        }
-
-        /* Gestion de l'affichage du bouton toggle dans la top-bar (visible uniquement si sidebar fermée) */
+        /* Le bouton toggle n'apparaît que quand la barre latérale est fermée */
         .top-bar .toggle-sidebar-btn {
             display: none;
         }
@@ -223,11 +219,13 @@
             border-radius: 2px;
         }
 
+        /* Section utilisateur fixe à droite peu importe l'état de la barre */
         .auth-section {
             display: flex;
             align-items: center;
             gap: 15px;
             font-size: 0.9rem;
+            margin-left: auto;
         }
 
         .btn-auth-main {
@@ -559,7 +557,7 @@
     <!-- MENU LATÉRAL -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <h3 class="sidebar-title">Business AI</h3>
+            <h3 class="sidebar-title">Buisness AI</h3>
             <!-- Bouton pour fermer la barre, positionné à droite dans l'en-tête de la sidebar -->
             <button class="toggle-sidebar-btn" id="toggle-sidebar-sidebar" title="Fermer le menu">
                 <div class="custom-icon-box">
@@ -606,7 +604,7 @@
 
             <div class="chat-input-container">
                 <div class="chat-input-wrapper">
-                    <input type="text" id="user-input" placeholder="Posez votre question business..." autocomplete="off">
+                    <input type="text" id="user-input" placeholder="Posez votre question buisness..." autocomplete="off">
                     <button type="button" class="send-btn" id="send-btn">&#10148;</button>
                 </div>
             </div>
@@ -651,7 +649,7 @@
             const greetings = [
                 "Par quoi commençons-nous aujourd'hui ?",
                 "Avez-vous un projet en tête ?",
-                "Voulez-vous commencer un Business ?",
+                "Voulez-vous commencer un Buisness ?",
                 "Avez-vous besoin d'aide sur la conception d'un projet ?",
                 "Manquez-vous d'idées ?"
             ];
@@ -667,7 +665,7 @@
             const mainWrapper = document.getElementById('main-wrapper');
             
             const sidebarWidth = 280;
-            let isSidebarOpen = false; // Par défaut fermée au chargement
+            let isSidebarOpen = false;
 
             function applySidebarState(open, animate = true) {
                 isSidebarOpen = open;
