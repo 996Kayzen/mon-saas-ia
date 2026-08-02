@@ -56,11 +56,20 @@
         }
 
         .sidebar-header {
-            padding: 20px;
+            padding: 15px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid var(--border-color);
+            height: 60px;
+        }
+
+        .sidebar-title {
+            color: var(--gold-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
         }
 
         .new-chat-btn {
@@ -207,19 +216,11 @@
             border-radius: 2px;
         }
 
-        /* Bouton toggle flottant visible sur mobile même quand le menu est ouvert */
-        .mobile-floating-toggle {
-            display: none;
-            position: fixed;
-            top: 11px;
-            left: 15px;
-            z-index: 101;
-        }
-
-        @media (max-width: 767px) {
-            .mobile-floating-toggle {
-                display: flex;
-            }
+        /* Bouton toggle mobile intégré dans l'en-tête de la sidebar */
+        .sidebar-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .auth-section {
@@ -549,19 +550,20 @@
     <!-- VOILE SOMBRE ARRIÈRE-PLAN MOBILE -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <!-- BOUTON FLOTTANT MOBILE (Visible en permanence même menu ouvert) -->
-    <button class="toggle-sidebar-btn mobile-floating-toggle" id="toggle-sidebar-mobile" title="Menu">
-        <div class="custom-icon-box">
-            <div class="custom-icon-bar"></div>
-            <div class="custom-icon-bar"></div>
-            <div class="custom-icon-bar"></div>
-        </div>
-    </button>
-
     <!-- MENU LATÉRAL -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <h3 style="color: #d4af37; font-size: 1rem; font-weight: 600;">Mentor Business</h3>
+            <div class="sidebar-header-left">
+                <!-- Bouton toggle intégré à gauche dans la sidebar ouverte -->
+                <button class="toggle-sidebar-btn" id="toggle-sidebar-sidebar" title="Menu">
+                    <div class="custom-icon-box">
+                        <div class="custom-icon-bar"></div>
+                        <div class="custom-icon-bar"></div>
+                        <div class="custom-icon-bar"></div>
+                    </div>
+                </button>
+                <h3 class="sidebar-title">Buisness AI</h3>
+            </div>
         </div>
         <button class="new-chat-btn" id="new-chat-btn">+ Nouveau chat</button>
         <div class="history-list" id="history-list"></div>
@@ -656,7 +658,7 @@
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             const togglePcBtn = document.getElementById('toggle-sidebar-pc');
-            const toggleMobileBtn = document.getElementById('toggle-sidebar-mobile');
+            const toggleSidebarBtn = document.getElementById('toggle-sidebar-sidebar');
             const mainWrapper = document.getElementById('main-wrapper');
             
             const sidebarWidth = 280;
@@ -700,7 +702,7 @@
             };
 
             if (togglePcBtn) togglePcBtn.addEventListener('click', toggleMenu);
-            if (toggleMobileBtn) toggleMobileBtn.addEventListener('click', toggleMenu);
+            if (toggleSidebarBtn) toggleSidebarBtn.addEventListener('click', toggleMenu);
 
             if (overlay) {
                 overlay.addEventListener('click', () => {
